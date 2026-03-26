@@ -180,7 +180,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-4">Select your preferred asset classes.</p>
-            <MultiSelect options={["Forex", "Stocks", "MMF"]} value={investmentStrategy} onChange={(val: any) => setInvestmentStrategy(val)} />
+            <MultiSelect options={["Forex", "Stocks", "MMF"]} value={investmentStrategy} onChange={setInvestmentStrategy} />
             <button onClick={handleStrategyUpdate} className="mt-6 w-full bg-primary text-primary-foreground text-sm py-2.5 rounded-lg font-bold">Update Strategy</button>
           </div>
         </div>
