@@ -6,6 +6,8 @@ import { SummaryCard } from "@/components/summary-card";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LineChart, Line, Legend } from "recharts";
 import { ReturnsHeatmap } from "@/components/returns-heatmap";
 import { Download, TrendingUp } from "lucide-react";
+import { usePortfolioData } from "@/hooks/use-portfolio-data";
+import { formatKSh } from "@/lib/utils";
 
 const monthlyPerformance = [
   { month: "Jan", return: 4.2 },
@@ -23,6 +25,12 @@ const monthlyPerformance = [
 ];
 
 export default function PerformancePage() {
+  const { data: portfolio } = usePortfolioData();
+
+  const totalReturnPercent = portfolio?.totalInvestment !== 0 
+    ? ((Number(portfolio?.netProfit || 0) / Number(portfolio?.totalInvestment || 1)) * 100).toFixed(1) + "%"
+    : "0.0%";
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-10">
@@ -38,9 +46,9 @@ export default function PerformancePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <SummaryCard label="Average Monthly Return" value="3.1%" />
-          <SummaryCard label="Best Month" value="+5.4%" subtext="December 2025" />
-          <SummaryCard label="Worst Month" value="-1.5%" subtext="March 2025" />
+          <SummaryCard label="Cumulative Return" value={totalReturnPercent} />
+          <SummaryCard label="Net Profit" value={formatKSh(Number(portfolio?.netProfit || 0))} />
+          <SummaryCard label="Highest Monthly Gain" value="+5.4%" subtext="December 2025" />
           <SummaryCard label="Max Drawdown" value="-3.2%" />
         </div>
 

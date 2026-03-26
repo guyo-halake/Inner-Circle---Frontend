@@ -1,22 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Search, Filter, Download, FileText } from "lucide-react";
-
+import { API_URL } from "@/lib/api";
 import { formatKSh } from "@/lib/utils";
-
-const transactions = [
-  { id: "TX123456", date: "26 Mar, 2026", type: "Deposit", amount: 500000.00, status: "Approved", method: "M-Pesa" },
-  { id: "TX123457", date: "24 Mar, 2026", type: "Withdrawal", amount: 120000.00, status: "Pending", method: "Bank Wire" },
-  { id: "TX123458", date: "20 Mar, 2026", type: "Deposit", amount: 1000000.00, status: "Approved", method: "M-Pesa" },
-  { id: "TX123459", date: "15 Mar, 2026", type: "Withdrawal", amount: 50000.00, status: "Rejected", method: "USDT" },
-  { id: "TX123460", date: "10 Mar, 2026", type: "Deposit", amount: 200000.00, status: "Approved", method: "M-Pesa" },
-  { id: "TX123461", date: "05 Mar, 2026", type: "Withdrawal", amount: 150000.00, status: "Approved", method: "Bank Wire" },
-];
+import { Skeleton } from "@/components/skeleton";
 
 export default function TransactionsPage() {
   const [filter, setFilter] = useState("All");
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/transactions`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setTransactions(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch transactions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   const filteredTransactions = transactions.filter(tx => 
     filter === "All" || tx.type === filter
@@ -69,36 +85,60 @@ export default function TransactionsPage() {
                 <tr>
                   <th className="px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Date</th>
                   <th className="px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Method</th>
                   <th className="px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Amount</th>
                   <th className="px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">ID</th>
                   <th className="px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y font-numbers">
-                {filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-accent/50 transition-colors group">
-                    <td className="px-6 py-4 font-sans text-sm">{tx.date}</td>
-                    <td className="px-6 py-4 font-sans font-medium text-sm">{tx.type}</td>
-                    <td className="px-6 py-4 font-sans text-sm text-muted-foreground">{tx.method}</td>
-                    <td className={`px-6 py-4 font-bold text-sm ${tx.type === "Deposit" ? "text-green-500" : "text-foreground"}`}>
-                      {tx.type === "Deposit" ? "+" : "-"}{formatKSh(tx.amount)}
-                    </td>
-                    <td className="px-6 py-4 font-mono text-xs text-muted-foreground">{tx.id}</td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        tx.status === "Approved" ? "bg-green-500/10 text-green-600 dark:text-green-400" :
-                        tx.status === "Pending" ? "bg-orange-500/10 text-orange-600 dark:text-orange-400" :
-                        "bg-red-500/10 text-red-600 dark:text-red-400"
-                      }`}>
-                        {tx.status}
-                      </span>
-                      <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-muted rounded-lg transition-all text-muted-foreground" title="View Receipt">
-                        <FileText className="w-4 h-4" />
-                      </button>
+                {loading ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                      <td className="px-6 py-4 text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-muted-foreground italic text-sm">
+                      No transactions found.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-accent/50 transition-colors group">
+                      <td className="px-6 py-4 font-sans text-sm">
+                        {new Date(tx.createdAt).toLocaleDateString("en-KE", { 
+                          day: "numeric", 
+                          month: "short", 
+                          year: "numeric" 
+                        })}
+                      </td>
+                      <td className="px-6 py-4 font-sans font-medium text-sm">{tx.type}</td>
+                      <td className={`px-6 py-4 font-bold text-sm ${tx.type === "Deposit" ? "text-green-500" : "text-foreground"}`}>
+                        {tx.type === "Deposit" ? "+" : "-"}{formatKSh(tx.amount)}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
+                        {tx.mpesaCheckoutId ? `MP-${tx.mpesaCheckoutId.slice(-6)}` : `TX-${tx.id}`}
+                      </td>
+                      <td className="px-6 py-4 text-right flex items-center justify-end gap-4">
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                          tx.status === "Completed" || tx.status === "Approved" ? "bg-green-500/10 text-green-600 dark:text-green-400" :
+                          tx.status === "Pending" ? "bg-orange-500/10 text-orange-600 dark:text-orange-400" :
+                          "bg-red-500/10 text-red-600 dark:text-red-400"
+                        }`}>
+                          {tx.status}
+                        </span>
+                        <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-muted rounded-lg transition-all text-muted-foreground" title="View Details">
+                          <FileText className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

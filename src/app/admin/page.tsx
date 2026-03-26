@@ -108,6 +108,22 @@ export default function AdminPage() {
     }
   };
 
+  const [summary, setSummary] = useState({ totalAUM: 0, totalUsers: 0, monthlyProfit: 0 });
+
+  useEffect(() => {
+    fetchSummary();
+  }, []);
+
+  const fetchSummary = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/summary`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      const data = await response.json();
+      setSummary(data);
+    } catch (err) {}
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto flex flex-col gap-8 font-sans">
@@ -134,10 +150,10 @@ export default function AdminPage() {
         {activeTab === "summary" && (
            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-in fade-in duration-500">
               {[
-                { label: "Total Money", value: formatKSh(45212500) },
-                { label: "Users", value: "842" },
-                { label: "Profit this month", value: formatKSh(3245000) },
-                { label: "System Status", value: "Working" },
+                { label: "Total AUM", value: formatKSh(summary.totalAUM) },
+                { label: "Total Users", value: summary.totalUsers.toString() },
+                { label: "Profit (30d)", value: formatKSh(summary.monthlyProfit) },
+                { label: "System Status", value: "Online" },
               ].map((stat, i) => (
                 <div key={i} className="bg-card/40 backdrop-blur-md border border-border/50 rounded-xl p-5 shadow-sm">
                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>

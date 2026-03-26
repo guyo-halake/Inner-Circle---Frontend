@@ -8,10 +8,12 @@ import { AvatarUpload } from "@/components/avatar-upload";
 import { MultiSelect } from "@/components/multi-select";
 import { API_URL } from "@/lib/api";
 import { Skeleton } from "@/components/skeleton";
+import { usePortfolioData } from "@/hooks/use-portfolio-data";
 import { Edit, Lock, User, Mail, Phone, MapPin, Save, ShieldCheck, Crown, FileCheck, Users } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, login } = useAuthStore();
+  const { data: portfolio } = usePortfolioData();
   const [isEditing, setIsEditing] = useState(false);
   const [investmentStrategy, setInvestmentStrategy] = useState<string[]>([]);
 
@@ -170,15 +172,15 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-6 mb-6">
               <div className="bg-background/50 p-6 rounded-xl">
                 <p className="text-sm text-muted-foreground">Total Investment</p>
-                <p className="text-3xl font-bold font-numbers">{formatKSh(1500000)}</p>
+                <p className="text-3xl font-bold font-numbers">{formatKSh(Number(portfolio?.totalInvestment || 0))}</p>
               </div>
               <div className="bg-background/50 p-6 rounded-xl">
                 <p className="text-sm text-muted-foreground">Net Profit</p>
-                <p className="text-3xl font-bold font-numbers text-green-500">{formatKSh(324512)}</p>
+                <p className="text-3xl font-bold font-numbers text-green-500">{formatKSh(Number(portfolio?.netProfit || 0))}</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-4">Select your preferred asset classes.</p>
-            <MultiSelect options={["Forex", "Stocks", "MMF"]} value={investmentStrategy} onChange={setInvestmentStrategy} />
+            <MultiSelect options={["Forex", "Stocks", "MMF"]} value={investmentStrategy} onChange={(val: any) => setInvestmentStrategy(val)} />
             <button onClick={handleStrategyUpdate} className="mt-6 w-full bg-primary text-primary-foreground text-sm py-2.5 rounded-lg font-bold">Update Strategy</button>
           </div>
         </div>
