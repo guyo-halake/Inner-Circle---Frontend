@@ -10,7 +10,7 @@ import { API_URL } from "@/lib/api";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  password: z.string().min(7, { message: "Password must be at least 7 characters" }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;

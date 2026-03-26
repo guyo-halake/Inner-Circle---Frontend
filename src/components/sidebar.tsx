@@ -10,7 +10,8 @@ import {
   Download, 
   Upload, 
   FileText, 
-  Settings 
+  Settings,
+  ShieldCheck
 } from "lucide-react";
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { name: "Withdraw", href: "/withdraw", icon: Upload },
   { name: "Reports", href: "/reports", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Admin Console", href: "/admin", icon: ShieldCheck },
 ];
 
 export function Sidebar() {

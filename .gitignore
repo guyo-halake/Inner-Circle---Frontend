@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sub-projects
+/ic-backend
+/MobileApp (android + ios)

@@ -8,7 +8,7 @@ import { AvatarUpload } from "@/components/avatar-upload";
 import { MultiSelect } from "@/components/multi-select";
 import { API_URL } from "@/lib/api";
 import { Skeleton } from "@/components/skeleton";
-import { Edit, Lock, User, Mail, Phone, MapPin, Save, ShieldCheck } from "lucide-react";
+import { Edit, Lock, User, Mail, Phone, MapPin, Save, ShieldCheck, Crown, FileCheck, Users } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, login } = useAuthStore();
@@ -80,19 +80,36 @@ export default function SettingsPage() {
                   alt="Avatar"
                   className="w-24 h-24 rounded-full border-4 border-background shadow-lg"
                 />
+                <div className="absolute -top-2 -right-2 bg-yellow-500 text-black p-1.5 rounded-full border-4 border-card shadow-lg" title="Platinum Tier Member">
+                  <Crown size={14} fill="currentColor" />
+                </div>
                 <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-1.5 border-4 border-card cursor-pointer">
                   <AvatarUpload />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-grow w-full">
-                <InfoField label="Full Name" name="fullName" value={user?.fullName} isEditing={isEditing} />
-                <InfoField label="Email Address" name="email" value={user?.email} isEditing={false} />
-                <InfoField label="Phone Number" name="phone" value={user?.phone} isEditing={isEditing} />
-                <InfoField label="Country" name="country" value={user?.country} isEditing={isEditing} />
+              <div className="flex flex-col gap-1 flex-grow">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-extrabold">{user?.fullName}</h2>
+                  <span className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-yellow-500/20">Platinum Investor</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-green-500 bg-green-500/5 px-2 py-1 rounded-md border border-green-500/10">
+                    <ShieldCheck size={12} /> Account Verified
+                  </div>
+                </div>
               </div>
             </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t">
+              <InfoField label="Full Name" name="fullName" value={user?.fullName} isEditing={isEditing} />
+              <InfoField label="Phone Number" name="phone" value={user?.phone} isEditing={isEditing} />
+              <InfoField label="Country" name="country" value={user?.country} isEditing={isEditing} />
+              <InfoField label="KRA PIN (for Taxes)" name="kra" value="A0123...456Z" isEditing={isEditing} />
+            </div>
+
             {isEditing && (
-              <div className="flex justify-end border-t pt-6 mt-6">
+              <div className="flex justify-end pt-6">
                 <button type="submit" className="bg-primary text-primary-foreground px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
                   <Save size={16} /> Save Changes
                 </button>
@@ -101,14 +118,46 @@ export default function SettingsPage() {
           </div>
         </form>
 
-        {/* Security Card */}
+        {/* KYC & Identity Card */}
         <div className="bg-card border rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md">
           <div className="p-8 border-b">
-            <h3 className="text-xl font-bold flex items-center gap-3"><ShieldCheck size={20} /> Security</h3>
+            <h3 className="text-xl font-bold flex items-center gap-3"><FileCheck size={20} /> Security Center</h3>
+          </div>
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Identity Verification</h4>
+              <div className="space-y-4">
+                <KYCItem title="National ID / Passport" status="Verified" />
+                <KYCItem title="KRA PIN Certificate" status="Verified" />
+                <KYCItem title="Proof of Residence" status="Pending" />
+              </div>
+            </div>
+            <div className="space-y-6">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Beneficiary / Next of Kin</h4>
+              <div className="p-4 border rounded-xl bg-background/50 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Users size={18} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Jane Mary Wanjiku</p>
+                    <p className="text-xs text-muted-foreground">Nominee (Spouse) - 100% Allocation</p>
+                  </div>
+                </div>
+                <button className="w-full py-2 bg-secondary border rounded-lg text-xs font-bold hover:bg-accent transition-colors">Manage Nominee</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Authentication Card */}
+        <div className="bg-card border rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md">
+          <div className="p-8 border-b">
+            <h3 className="text-xl font-bold flex items-center gap-3"><Lock size={20} /> Authentication</h3>
           </div>
           <div className="p-8 space-y-4">
-            <SecurityOption title="Change Password" description="Choose a new, strong password." buttonText="Change" />
-            <SecurityOption title="Two-Factor Authentication" description="Add an extra layer of security to your account." buttonText="Enable" />
+            <SecurityOption title="Change Password" description="Last changed 3 months ago." buttonText="Update" />
+            <SecurityOption title="M-Pesa 2FA" description="Secure your withdrawals via mobile verification code." buttonText="Enabled" isSuccess />
           </div>
         </div>
 
@@ -153,14 +202,27 @@ function InfoField({ label, name, value, isEditing }: any) {
   );
 }
 
-function SecurityOption({ title, description, buttonText }: any) {
+function SecurityOption({ title, description, buttonText, isSuccess }: any) {
   return (
     <div className="flex justify-between items-center p-4 border rounded-xl bg-background/50">
       <div>
         <p className="font-bold text-sm">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <button className="bg-secondary border px-4 py-2 rounded-lg text-sm font-bold hover:bg-accent transition-colors">{buttonText}</button>
+      <button className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+        isSuccess ? "bg-green-500/10 text-green-600 border border-green-500/20" : "bg-secondary border hover:bg-accent"
+      }`}>{buttonText}</button>
+    </div>
+  );
+}
+
+function KYCItem({ title, status }: { title: string; status: "Verified" | "Pending" | "Rejected" }) {
+  return (
+    <div className="flex items-center justify-between p-3 border rounded-lg bg-background/30">
+      <p className="text-sm font-medium">{title}</p>
+      <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+        status === "Verified" ? "text-green-500 bg-green-500/5" : "text-orange-500 bg-orange-500/5"
+      }`}>{status}</span>
     </div>
   );
 }

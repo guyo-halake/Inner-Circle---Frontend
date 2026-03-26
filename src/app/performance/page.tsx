@@ -3,7 +3,9 @@
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { PortfolioChart } from "@/components/portfolio-chart";
 import { SummaryCard } from "@/components/summary-card";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LineChart, Line, Legend } from "recharts";
+import { ReturnsHeatmap } from "@/components/returns-heatmap";
+import { Download, TrendingUp } from "lucide-react";
 
 const monthlyPerformance = [
   { month: "Jan", return: 4.2 },
@@ -24,9 +26,15 @@ export default function PerformancePage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-10">
-        <div>
-          <h1 className="text-3xl font-bold mb-2 tracking-tight">Performance</h1>
-          <p className="text-muted-foreground">Comprehensive analytics and historical growth metrics.</p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 tracking-tight">Performance</h1>
+            <p className="text-muted-foreground">Comprehensive analytics and historical growth metrics.</p>
+          </div>
+          <button className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">
+            <Download className="w-4 h-4" />
+            Export Performance PDF
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -36,18 +44,51 @@ export default function PerformancePage() {
           <SummaryCard label="Max Drawdown" value="-3.2%" />
         </div>
 
-        <div className="flex justify-end">
-          <div className="flex items-center gap-4 p-2 border rounded-lg">
-            <input type="date" className="bg-transparent text-sm focus:outline-none" />
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex bg-muted p-1 rounded-xl w-full md:w-auto">
+            {["1D", "1W", "1M", "1Y", "ALL"].map((range) => (
+              <button 
+                key={range}
+                className={`flex-1 md:flex-none px-6 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  range === "1Y" ? "bg-background shadow-sm" : "hover:text-primary"
+                }`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-4 p-2 border rounded-xl w-full md:w-auto">
+            <input type="date" className="bg-transparent text-sm focus:outline-none flex-1" />
             <span className="text-sm text-muted-foreground">to</span>
-            <input type="date" className="bg-transparent text-sm focus:outline-none" />
-            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity">
+            <input type="date" className="bg-transparent text-sm focus:outline-none flex-1" />
+            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity">
               Apply
             </button>
           </div>
         </div>
 
-        <PortfolioChart />
+        <div className="bg-card border rounded-xl p-8 shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+            <h3 className="text-xl font-bold">Portfolio Growth vs Benchmarks</h3>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary" defaultChecked />
+                <span className="text-xs font-medium">InnerCircle Pool</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-secondary" />
+                <span className="text-xs font-medium text-muted-foreground">NSE 20 Index</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-secondary" />
+                <span className="text-xs font-medium text-muted-foreground">91-Day T-Bill</span>
+              </label>
+            </div>
+          </div>
+          <PortfolioChart />
+        </div>
+
+        <ReturnsHeatmap />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 bg-card border rounded-xl p-8 shadow-sm">
@@ -106,7 +147,7 @@ export default function PerformancePage() {
                       borderRadius: "8px"
                     }}
                     itemStyle={{ color: "hsl(var(--foreground))" }}
-                    formatter={(value: number) => [`${value}%`, "Return"]}
+                    formatter={(value: any) => [`${value}%`, "Return"]}
                   />
                   <Bar dataKey="return">
                     {monthlyPerformance.map((entry, index) => (

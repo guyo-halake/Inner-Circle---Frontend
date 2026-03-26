@@ -1,107 +1,86 @@
 "use client";
 
-import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { FileText, Download, ChevronRight, X } from "lucide-react";
+import { 
+  FileDown, 
+  CalendarDays, 
+  ArrowRight, 
+  TrendingUp, 
+  ShieldCheck,
+  Zap
+} from "lucide-react";
 import { formatKSh } from "@/lib/utils";
 
 const reports = [
-  { month: "February 2026", opening: 1724512.50, closing: 1824512.50, change: 100000.00, return: "+5.8%" },
-  { month: "January 2026", opening: 1542000.00, closing: 1724512.50, change: 182512.50, return: "+11.8%" },
-  { month: "December 2025", opening: 1285000.00, closing: 1542000.00, change: 257000.00, return: "+20.0%" },
-  { month: "November 2025", opening: 1050000.00, closing: 1285000.00, change: 235000.00, return: "+22.4%" },
-  { month: "October 2025", opening: 920000.00, closing: 1050000.00, change: 130000.00, return: "+14.1%" },
+  { id: 1, type: "Performance Audit", month: "March 2026", size: "1.2 MB" },
+  { id: 2, type: "Historical Returns", month: "Feb 2026", size: "840 KB" },
+  { id: 3, type: "KRA Tax Statement", month: "FY 2025/26", size: "2.5 MB" },
 ];
 
 export default function ReportsPage() {
-  const [selectedReport, setSelectedReport] = useState<typeof reports[0] | null>(null);
-
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-10">
-        <div>
-          <h1 className="text-3xl font-bold mb-2 tracking-tight">Investment Reports</h1>
-          <p className="text-muted-foreground">Download and view your monthly performance statements.</p>
+      <div className="max-w-5xl mx-auto flex flex-col gap-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black mb-2 tracking-tighter">Financial Reports</h1>
+            <p className="text-muted-foreground font-medium italic">High-fidelity audit logs and performance statements.</p>
+          </div>
+          <button className="flex items-center gap-3 px-6 py-3 bg-primary text-primary-foreground rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all">
+             <CalendarDays size={16} />
+             Select Date Range
+          </button>
         </div>
 
-        <div className="bg-card border rounded-xl shadow-sm">
-          <div className="p-6 border-b flex justify-between items-center">
-            <h3 className="font-bold">Monthly Statements</h3>
-            <span className="text-xs text-muted-foreground uppercase tracking-widest">Select to view details</span>
-          </div>
-
-          <div className="divide-y">
-            {reports.map((report) => (
-              <div 
-                key={report.month} 
-                className="p-6 flex items-center justify-between hover:bg-accent/50 transition-colors cursor-pointer group"
-                onClick={() => setSelectedReport(report)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold">{report.month}</p>
-                    <p className="text-xs text-muted-foreground">Statement of Account</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-8">
-                  <div className="text-right hidden md:block">
-                    <p className="text-sm font-bold font-numbers">+{formatKSh(report.change)}</p>
-                    <p className="text-xs text-green-500 font-medium">{report.return}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+           <div className="lg:col-span-2 bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-xl">
+              <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground mb-10 flex items-center gap-3">
+                 <FileDown size={14} className="text-primary" />
+                 Ready to Download
+              </h3>
+              
+              <div className="space-y-6">
+                 {reports.map((report) => (
+                    <div key={report.id} className="group flex items-center justify-between p-5 rounded-2xl bg-muted/20 border border-border/40 hover:bg-muted/40 transition-all border-dashed hover:border-solid hover:border-primary/30">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 bg-background rounded-xl text-muted-foreground group-hover:text-primary transition-colors">
+                             <FileDown size={20} />
+                          </div>
+                          <div>
+                             <p className="text-xs font-black uppercase tracking-widest">{report.type}</p>
+                             <p className="text-[10px] text-muted-foreground font-medium">{report.month} • {report.size}</p>
+                          </div>
+                       </div>
+                       <button className="p-2 border border-border/50 rounded-lg hover:bg-primary/10 hover:border-primary/30 transition-all">
+                          <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                       </button>
+                    </div>
+                 ))}
               </div>
-            ))}
-          </div>
+           </div>
+
+           <div className="space-y-8 h-full">
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-8 shadow-xl relative group overflow-hidden">
+                 <Zap size={60} className="absolute -bottom-4 -right-4 opacity-5 group-hover:rotate-12 transition-transform text-primary" />
+                 <h4 className="text-xs font-black uppercase tracking-widest mb-4">Benchmark Report</h4>
+                 <p className="text-xs text-muted-foreground leading-relaxed font-bold italic mb-6">
+                    See how your capital performs compared to regional indices like the NSE 20 and Global Forex benchmarks.
+                 </p>
+                 <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                    Generate Benchmark Analyst <ArrowRight size={12} />
+                 </button>
+              </div>
+
+              <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-xl flex flex-col justify-center items-center text-center">
+                 <ShieldCheck size={40} className="text-green-500 mb-4" />
+                 <h4 className="text-xs font-black uppercase tracking-widest mb-2">Verified Statements</h4>
+                 <p className="text-[10px] text-muted-foreground font-bold max-w-[140px] leading-relaxed">
+                    All reports are digitally signed and KRA-compliance ready.
+                 </p>
+              </div>
+           </div>
         </div>
       </div>
-
-      {selectedReport && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-card border rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b flex justify-between items-center bg-muted/30">
-              <h3 className="text-xl font-bold">{selectedReport.month} Report</h3>
-              <button onClick={() => setSelectedReport(null)} className="p-1 hover:bg-accent rounded-md transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-8 space-y-8">
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Opening Balance</p>
-                  <p className="text-xl font-bold font-numbers">{formatKSh(selectedReport.opening)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Closing Balance</p>
-                  <p className="text-xl font-bold font-numbers">{formatKSh(selectedReport.closing)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Net Change</p>
-                  <p className="text-xl font-bold font-numbers text-green-500">+{formatKSh(selectedReport.change)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Return Percentage</p>
-                  <p className="text-xl font-bold font-numbers text-green-500">{selectedReport.return}</p>
-                </div>
-              </div>
-
-              <div className="pt-8 border-t space-y-4">
-                <button className="w-full flex items-center justify-center gap-3 bg-primary text-primary-foreground py-3 rounded-lg font-bold hover:opacity-90 transition-opacity">
-                  <Download className="w-4 h-4" />
-                  Download as PDF
-                </button>
-                <button className="w-full flex items-center justify-center gap-3 bg-secondary border py-3 rounded-lg font-bold hover:bg-accent transition-colors">
-                  <FileText className="w-4 h-4" />
-                  View Detailed Trades
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 }

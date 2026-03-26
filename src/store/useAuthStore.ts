@@ -8,6 +8,8 @@ interface User {
   phone: string;
   country: string;
   currency: string;
+  avatarUrl?: string;
+  investmentStrategy?: string;
 }
 
 interface AuthState {

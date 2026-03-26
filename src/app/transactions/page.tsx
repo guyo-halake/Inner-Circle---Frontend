@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Search, Filter, Download } from "lucide-react";
+import { Search, Filter, Download, FileText } from "lucide-react";
 
 import { formatKSh } from "@/lib/utils";
 
@@ -77,7 +77,7 @@ export default function TransactionsPage() {
               </thead>
               <tbody className="divide-y font-numbers">
                 {filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-accent/50 transition-colors">
+                  <tr key={tx.id} className="hover:bg-accent/50 transition-colors group">
                     <td className="px-6 py-4 font-sans text-sm">{tx.date}</td>
                     <td className="px-6 py-4 font-sans font-medium text-sm">{tx.type}</td>
                     <td className="px-6 py-4 font-sans text-sm text-muted-foreground">{tx.method}</td>
@@ -85,7 +85,7 @@ export default function TransactionsPage() {
                       {tx.type === "Deposit" ? "+" : "-"}{formatKSh(tx.amount)}
                     </td>
                     <td className="px-6 py-4 font-mono text-xs text-muted-foreground">{tx.id}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         tx.status === "Approved" ? "bg-green-500/10 text-green-600 dark:text-green-400" :
                         tx.status === "Pending" ? "bg-orange-500/10 text-orange-600 dark:text-orange-400" :
@@ -93,6 +93,9 @@ export default function TransactionsPage() {
                       }`}>
                         {tx.status}
                       </span>
+                      <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-muted rounded-lg transition-all text-muted-foreground" title="View Receipt">
+                        <FileText className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
