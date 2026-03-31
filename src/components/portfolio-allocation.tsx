@@ -1,17 +1,48 @@
-"use client";
-
+import { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { API_URL } from "@/lib/api";
 
-const data = [
-  { name: "Stocks", value: 35, color: "#3B82F6" },         // Blue
-  { name: "MMF (Money Market)", value: 25, color: "#10B981" }, // Green
-  { name: "Forex Trading", value: 25, color: "#FACC15" },      // Yellow
-  { name: "Crypto Trading", value: 15, color: "#F97316" },      // Orange
-];
+const defaultColors: Record<string, string> = {
+  'Stocks': '#3B82F6',
+  'MMF': '#10B981',
+  'Forex': '#FACC15',
+  'Crypto': '#F97316'
+};
 
 export function PortfolioAllocation() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/portfolio/allocation`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
+        const allocation = await response.json();
+        setData(allocation);
+      } catch (error) {
+        console.error("Failed to load allocation", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div className="h-full flex items-center justify-center text-[10px] uppercase font-black opacity-20 italic">Calculating breakdown...</div>;
+  
+  if (data.length === 0) return (
+    <div className="bg-card/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl h-full flex flex-col items-center justify-center text-center">
+       <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-4 opacity-20">
+          <div className="w-4 h-4 border-2 border-primary rounded-full" />
+       </div>
+       <p className="text-[10px] font-black uppercase tracking-widest opacity-30">No active pool investments</p>
+    </div>
+  );
+
   return (
-    <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-xl h-full flex flex-col group">
+    <div className="bg-card/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl h-full flex flex-col group relative overflow-hidden before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-br before:from-white/20 before:to-transparent before:content-[''] before:rounded-2xl before:-z-10">
       <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3 mb-8">
          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
          Portfolio Breakdown
@@ -66,9 +97,9 @@ export function PortfolioAllocation() {
                   <span className="text-[10px] font-extrabold text-foreground/80 tracking-tight group-hover/item:text-primary transition-colors">{item.name}</span>
                 </div>
                 <div className="flex justify-between items-end">
-                  <span className="text-xs font-black font-numbers">{item.value}%</span>
+                  <span className="text-xs font-black font-numbers">{item.value.toLocaleString()}</span>
                   <div className="w-8 h-[2px] rounded-full bg-border/40 overflow-hidden">
-                     <div className="h-full bg-primary/40" style={{ width: `${item.value}%`, backgroundColor: item.color }} />
+                     <div className="h-full bg-primary/40" style={{ width: `100%`, backgroundColor: item.color }} />
                   </div>
                 </div>
              </div>
