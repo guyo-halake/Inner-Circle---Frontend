@@ -34,7 +34,8 @@ export function TopBar() {
   const [currentTime, setCurrentTime] = useState("");
 
   const { data: portfolio } = usePortfolioData();
-  const walletLimit = 1250000;
+  
+  const liquidBalance = user?.wallets?.find(w => w.type === 'POCKET_HOLD')?.balance || 0;
 
   useEffect(() => {
     const updateTime = () => {
@@ -65,40 +66,22 @@ export function TopBar() {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/60 backdrop-blur-2xl z-[60] px-6 flex items-center justify-between">
-        {/* Logo & Market Time */}
+        {/* Logo */}
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="text-xl font-black tracking-tighter hover:opacity-80 transition-opacity">
             Inner<span className="text-primary italic">Circle</span>
           </Link>
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-muted/40 rounded-full border border-border/50 select-none">
-            <Clock size={12} className="text-primary animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
-              EAT: <span className="text-foreground">{currentTime}</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Command Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search Portfolios, Statements... (Ctrl+K)"
-              className="w-full bg-muted/30 border border-border/50 rounded-xl py-2 pl-10 pr-4 text-[11px] font-medium focus:outline-none focus:ring-1 focus:ring-primary/30 group-hover:bg-muted/50 transition-all placeholder:text-muted-foreground/60"
-            />
-          </div>
         </div>
 
         {/* Action Center */}
         <div className="flex items-center gap-3">
-          <div className="hidden xl:flex items-center gap-4 border-r border-border/50 pr-4 mr-2">
+          <div className="hidden md:flex items-center gap-4 border-r border-white/5 pr-4 mr-2">
             <div className="flex flex-col items-end">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Liquid Wallet</span>
-              <span className="text-xs font-black font-numbers">{formatKSh(walletLimit)}</span>
+              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-40">Liquid Wallet</span>
+              <span className="text-[14px] font-black font-numbers text-foreground tracking-tighter">{formatKSh(Number(liquidBalance))}</span>
             </div>
-            <div className="p-2 bg-primary/10 rounded-lg text-primary">
-              <Wallet size={16} />
+            <div className="p-2 bg-primary/5 rounded-lg text-primary border border-primary/10">
+              <Wallet size={14} />
             </div>
           </div>
 
