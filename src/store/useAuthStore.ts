@@ -4,12 +4,23 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 interface User {
   id: number;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
+  aliasPhoneWhatsApp?: string;
+  aliasPhoneTelegram?: string;
   country: string;
   currency: string;
+  role: 'Investor' | 'Admin' | 'Developer';
   avatarUrl?: string;
   investmentStrategy?: string;
+  bankName?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  mpesaNumber?: string;
+  cryptoAddress?: string;
+  wallets?: Array<{ type: string; balance: number }>;
 }
 
 interface AuthState {
