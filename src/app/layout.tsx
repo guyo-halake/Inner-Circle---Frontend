@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "Private investment access with transparent performance",
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -36,6 +38,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster position="top-center" richColors theme="dark" />
         </ThemeProvider>
       </body>
     </html>
