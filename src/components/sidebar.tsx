@@ -11,28 +11,38 @@ import {
   Upload, 
   FileText, 
   Settings,
-  ShieldCheck
+  ShieldCheck,
+  Terminal,
+  History
 } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { name: "Performance", href: "/performance", icon: TrendingUp },
-  { name: "Transactions", href: "/transactions", icon: ArrowRightLeft },
-  { name: "Deposit", href: "/deposit", icon: Download },
-  { name: "Withdraw", href: "/withdraw", icon: Upload },
-  { name: "Reports", href: "/reports", icon: FileText },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Admin Console", href: "/admin", icon: ShieldCheck },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["Investor", "Admin", "Developer"] },
+  { name: "Portfolio", href: "/portfolio", icon: Briefcase, roles: ["Investor", "Admin", "Developer"] },
+  { name: "Deposit & Withdraw", href: "/transactions", icon: History, roles: ["Investor", "Admin", "Developer"] },
+  { name: "Deposit", href: "/transactions?tab=Deposit", icon: Download, roles: ["Investor", "Admin", "Developer"] },
+  { name: "Withdraw", href: "/transactions?tab=Withdraw", icon: Upload, roles: ["Investor", "Admin", "Developer"] },
+  { name: "Reports", href: "/reports", icon: FileText, roles: ["Investor", "Admin", "Developer"] },
+  { name: "Settings", href: "/settings", icon: Settings, roles: ["Investor", "Admin", "Developer"] },
+  { name: "Admin", href: "/admin", icon: ShieldCheck, roles: ["Admin", "Developer"] },
+  { name: "Developer Settings", href: "/developer-settings", icon: Terminal, roles: ["Developer"] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
+  
+  const role = user?.role || "Investor";
+
+  const filteredItems = navItems.filter((item: any) => 
+    !item.roles || item.roles.includes(role)
+  );
 
   return (
     <aside className="w-64 border-r bg-background flex flex-col fixed left-0 top-16 bottom-0 z-40">
       <nav className="flex-grow p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {filteredItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
