@@ -1,0 +1,41 @@
+name: Mobile Release Prep
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (example: v1.2-mobile)'
+        required: true
+        type: string
+
+jobs:
+  prepare-mobile-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: MobileApp (android + ios)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: MobileApp (android + ios)/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo doctor
+        run: npm run doctor
+
+      - name: Export bundle artifact
+        run: npx expo export --platform all --output-dir dist
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-${{ inputs.release_tag }}
+          path: MobileApp (android + ios)/dist

@@ -1,0 +1,38 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Mobile: Expo Start",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "start"],
+      "options": {
+        "cwd": "${workspaceFolder}/MobileApp (android + ios)"
+      },
+      "group": "build",
+      "isBackground": true
+    },
+    {
+      "label": "Mobile: Android Emulator + App",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "android"],
+      "options": {
+        "cwd": "${workspaceFolder}/MobileApp (android + ios)"
+      },
+      "group": "build",
+      "isBackground": true
+    },
+    {
+      "label": "Backend: Start",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/ic-backend"
+      },
+      "group": "build",
+      "isBackground": true
+    }
+  ]
+}
