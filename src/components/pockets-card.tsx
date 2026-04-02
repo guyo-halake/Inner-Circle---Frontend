@@ -13,7 +13,8 @@ export function PocketsCard() {
   const wallets = user?.wallets || [];
   
   const getBalance = (type: string) => {
-    return wallets.find(w => w.type === type)?.balance || 0;
+    const balance = wallets.find(w => w.type === type)?.balance;
+    return balance ? parseFloat(balance.toString()) : 0;
   };
 
   const pockets = [

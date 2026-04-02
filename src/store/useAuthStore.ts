@@ -20,7 +20,7 @@ interface User {
   bankAccountNumber?: string;
   mpesaNumber?: string;
   cryptoAddress?: string;
-  wallets?: Array<{ type: string; balance: number }>;
+  wallets?: Array<{ type: string; balance: number | string }>;
 }
 
 interface AuthState {
