@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatKSh } from "@/lib/utils";
 import { Wallet, Landmark, TrendingUp, ArrowRight, Coins } from "lucide-react";
@@ -57,14 +58,24 @@ export function PocketsCard() {
             {pocket.type === "POCKET_HOLD" ? (
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="bg-primary text-primary-foreground px-3 py-1 rounded-lg text-[9px] uppercase font-black tracking-widest hover:opacity-90 transition-opacity flex items-center gap-1.5"
+                className="bg-primary text-primary-foreground px-3 py-1 rounded-lg text-[9px] uppercase font-black tracking-widest hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer"
               >
                  <Coins size={10} /> Stake Capital
               </button>
-            ) : (
-              <button className="text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+            ) : pocket.type === "POCKET_ALLOCATION" ? (
+              <Link 
+                href="/portfolio" 
+                className="text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+              >
                  Manage <ArrowRight size={10} />
-              </button>
+              </Link>
+            ) : (
+              <Link 
+                href="/withdraw" 
+                className="text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                 Withdraw <ArrowRight size={10} />
+              </Link>
             )}
           </div>
           

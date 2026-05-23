@@ -3,7 +3,7 @@
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { API_URL } from "@/lib/api";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <TopBar />
       <div className="flex">
-        <Sidebar />
+        <Suspense fallback={<aside className="w-64 border-r bg-background flex flex-col fixed left-0 top-16 bottom-0 z-40" />}>
+          <Sidebar />
+        </Suspense>
         <main className="flex-grow pt-16 pl-64 min-h-screen">
           <div className="container mx-auto p-8 max-w-7xl">
             {children}

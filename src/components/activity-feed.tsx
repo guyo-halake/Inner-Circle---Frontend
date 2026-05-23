@@ -42,7 +42,7 @@ export function ActivityFeed() {
       <div className="flex justify-between items-center mb-8">
         <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 flex items-center gap-3 italic">
            <CalendarDays size={14} className="text-primary" />
-           Peer Intelligence
+           Recent Activity
         </h3>
       </div>
 

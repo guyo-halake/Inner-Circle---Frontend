@@ -8,8 +8,12 @@ export function LandingNavbar() {
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="text-xl font-bold tracking-tight">
-            InnerCircle
+          <Link href="/" className="hover:opacity-80 transition-opacity">
+            <img 
+              src="/WhatsApp_Image_2026-05-23_at_13.40.38-removebg-preview.png" 
+              alt="InnerCircle Logo" 
+              className="h-10 w-auto object-contain" 
+            />
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             <Link href="#performance" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">

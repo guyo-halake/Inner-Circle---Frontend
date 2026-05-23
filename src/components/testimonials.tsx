@@ -1,18 +1,18 @@
 const testimonials = [
   {
-    quote: "InnerCircle has been a game-changer for my investment strategy. The transparency and real-time updates are exactly what I was looking for.",
-    name: "John Kimani",
-    title: "Investor",
+    quote: "The transparency is what sets InnerCircle apart. Being able to track daily returns and manage withdrawals with zero friction has completely redefined private capital management for me.",
+    name: "Razak Guyo",
+    title: "Private Investor",
   },
   {
-    quote: "The platform is incredibly easy to use, and the team is always responsive. I feel in control of my capital, which is a huge plus.",
-    name: "Jane Wanjiru",
-    title: "Investor",
+    quote: "I love the simplicity of the dashboard. Instead of waiting for monthly or quarterly PDF statements, I can see my allocation growth and yield in real-time.",
+    name: "Sarah Rashid",
+    title: "Tech Entrepreneur & Investor",
   },
   {
-    quote: "I was hesitant at first, but the performance and the professionalism of the InnerCircle team have exceeded my expectations.",
-    name: "Peter Omondi",
-    title: "Investor",
+    quote: "Having a predictable 5% monthly return structure backed by active, transparent trade proofs gives me peace of mind that traditional options simply cannot offer.",
+    name: "Joseph Gitari",
+    title: "Managing Director, JG Enterprises",
   },
 ];
 

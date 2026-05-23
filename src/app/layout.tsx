@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Roboto } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -8,9 +8,9 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const roboto = Roboto({
-  weight: ["400", "500", "700"],
-  variable: "--font-roboto",
+const sora = Sora({
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-sora",
   subsets: ["latin"],
 });
 
@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from "sonner";
+import { SystemSettingsProvider } from "@/components/system-settings-provider";
 
 export default function RootLayout({
   children,
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${roboto.variable} font-sans min-h-screen bg-background text-foreground antialiased`}
+        className={`${inter.variable} ${sora.variable} font-sans min-h-screen bg-background text-foreground antialiased`}
       >
         <ThemeProvider
           attribute="class"
@@ -37,7 +38,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <SystemSettingsProvider>
+            {children}
+          </SystemSettingsProvider>
           <Toaster position="top-center" richColors theme="dark" />
         </ThemeProvider>
       </body>

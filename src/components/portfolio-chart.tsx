@@ -13,10 +13,12 @@ import {
 import { LineChart, Table, BarChart3, TrendingUp } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { formatCompactKSh } from "@/lib/utils";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const timeFilters = ["1D", "1W", "1M", "3M", "ALL"];
 
 export function PortfolioChart() {
+  const { token } = useAuthStore();
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("1M");
@@ -27,7 +29,7 @@ export function PortfolioChart() {
     const fetchHistory = async () => {
       try {
         const response = await fetch(`${API_URL}/api/portfolio/history`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
         

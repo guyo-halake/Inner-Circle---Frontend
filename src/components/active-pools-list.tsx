@@ -10,6 +10,21 @@ export function ActivePoolsList() {
   
   const activePools = data?.poolInvestments || [];
 
+  let aggregateROI = 0;
+  let totalStaked = 0;
+  let totalCurrent = 0;
+
+  activePools.forEach((pool: any) => {
+    totalStaked += Number(pool.staked_amount || 0);
+    totalCurrent += Number(pool.current_value || 0);
+  });
+
+  if (totalStaked > 0) {
+    aggregateROI = ((totalCurrent - totalStaked) / totalStaked) * 100;
+  } else if (data && Number(data.totalInvestment) > 0) {
+    aggregateROI = (Number(data.netProfit) / Number(data.totalInvestment)) * 100;
+  }
+
   return (
     <div className="bg-card/30 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 h-full flex flex-col group">
       <div className="flex items-center justify-between mb-8">
@@ -64,7 +79,7 @@ export function ActivePoolsList() {
       <div className="mt-8 pt-8 border-t border-white/5">
          <div className="flex items-center justify-between opacity-40">
             <span className="text-[9px] font-black uppercase tracking-widest">Aggregate ROI</span>
-            <span className="text-xs font-black font-numbers text-emerald-500">+12.4%</span>
+            <span className="text-xs font-black font-numbers text-emerald-500">+{aggregateROI.toFixed(1)}%</span>
          </div>
       </div>
     </div>

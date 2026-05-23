@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { API_URL } from "@/lib/api";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const defaultColors: Record<string, string> = {
   'Stocks': '#3B82F6',
@@ -10,6 +11,7 @@ const defaultColors: Record<string, string> = {
 };
 
 export function PortfolioAllocation() {
+  const { token } = useAuthStore();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,7 +19,7 @@ export function PortfolioAllocation() {
     const fetchData = async () => {
       try {
         const response = await fetch(`${API_URL}/api/portfolio/allocation`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         const allocation = await response.json();
         setData(allocation);

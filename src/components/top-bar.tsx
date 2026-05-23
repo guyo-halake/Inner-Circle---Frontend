@@ -68,8 +68,12 @@ export function TopBar() {
       <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/60 backdrop-blur-2xl z-[60] px-6 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-xl font-black tracking-tighter hover:opacity-80 transition-opacity">
-            Inner<span className="text-primary italic">Circle</span>
+          <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+            <img 
+              src="/WhatsApp_Image_2026-05-23_at_13.40.38-removebg-preview.png" 
+              alt="InnerCircle Logo" 
+              className="h-10 w-auto object-contain" 
+            />
           </Link>
         </div>
 

@@ -8,14 +8,25 @@ import { QuickActions } from "@/components/quick-actions";
 import { usePortfolioData } from "@/hooks/use-portfolio-data";
 import { formatKSh } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { PocketsCard } from "@/components/pockets-card";
 import { ActivityFeed } from "@/components/activity-feed";
 
 export default function DashboardPage() {
   const { data, error } = usePortfolioData();
   const user = useAuthStore((state) => state.user);
+  const router = useRouter();
   const [showActivity, setShowActivity] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const role = user.role?.toLowerCase();
+      if (role === "admin" || role === "developer") {
+        router.replace("/admin");
+      }
+    }
+  }, [user, router]);
 
   if (!data) {
     return (
