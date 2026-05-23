@@ -21,7 +21,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --font-sans: var(--font-inter);
-  --font-numbers: var(--font-roboto);
+  --font-sora: var(--font-sora);
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -31,6 +31,7 @@
     from {
       transform: translateX(0);
     }
+
     to {
       transform: translateX(-100%);
     }
@@ -86,10 +87,62 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
-  .font-numbers {
-    font-family: var(--font-roboto);
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-sora), sans-serif;
   }
+
+  .font-numbers {
+    font-family: var(--font-sora), sans-serif;
+  }
+}
+
+/* Custom Theme Classes Overrides */
+.theme-zinc {
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+}
+
+.dark .theme-zinc {
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+}
+
+.theme-emerald {
+  --primary: #10b981;
+  --primary-foreground: #ffffff;
+}
+
+.dark .theme-emerald {
+  --primary: #34d399;
+  --primary-foreground: #064e3b;
+}
+
+.theme-indigo {
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+}
+
+.dark .theme-indigo {
+  --primary: #818cf8;
+  --primary-foreground: #0f172a;
+}
+
+.theme-orange {
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+}
+
+.dark .theme-orange {
+  --primary: #fb923c;
+  --primary-foreground: #431407;
 }

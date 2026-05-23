@@ -1,190 +1,405 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { formatKSh } from "@/lib/utils";
+import { API_URL } from "@/lib/api";
+import { useAuthStore } from "@/store/useAuthStore";
 import { 
-  ArrowRight, 
-  ShieldCheck, 
-  Info,
   CheckCircle2,
   Wallet,
   Landmark,
-  ShieldAlert
+  Loader2,
+  Smartphone,
+  ArrowLeft,
+  Calendar,
+  Clock
 } from "lucide-react";
+import Link from "next/link";
+
+type WalletItem = {
+  type: string;
+  balance: string | number;
+};
 
 export default function WithdrawPage() {
+  const { token } = useAuthStore();
+  const [step, setStep] = useState<"input" | "confirm" | "success">("input");
   const [method, setMethod] = useState<"mpesa" | "bank">("mpesa");
   const [amount, setAmount] = useState("");
+  const [phone, setPhone] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [loadingTransition, setLoadingTransition] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [wallets, setWallets] = useState<WalletItem[]>([]);
 
-  const handleWithdraw = () => {
-    setLoading(true);
+  useEffect(() => {
+    const fetchUserWallets = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/users/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setWallets(data.wallets || []);
+          
+          if (data.mpesaNumber) {
+            setPhone(data.mpesaNumber);
+          } else if (data.phone) {
+            setPhone(data.phone);
+          }
+
+          if (data.bankName) setBankName(data.bankName);
+          if (data.bankAccountNumber) setAccountNumber(data.bankAccountNumber);
+          if (data.bankAccountName) setAccountName(data.bankAccountName);
+        }
+      } catch (err) {
+        console.error("Failed to fetch wallets:", err);
+      } finally {
+        setFetching(false);
+      }
+    };
+    if (token) {
+      fetchUserWallets();
+    }
+  }, [token]);
+
+  const holdBalance = wallets.find(w => w.type === "POCKET_HOLD")?.balance 
+    ? Number(wallets.find(w => w.type === "POCKET_HOLD")?.balance)
+    : 0;
+
+  const yieldBalance = wallets.find(w => w.type === "POCKET_YIELD")?.balance 
+    ? Number(wallets.find(w => w.type === "POCKET_YIELD")?.balance)
+    : 0;
+
+  const withdrawable = holdBalance;
+
+  const handleContinue = () => {
+    if (!amount || Number(amount) <= 0) {
+      return alert("Please enter a valid withdrawal amount.");
+    }
+    if (Number(amount) > withdrawable) {
+      return alert("Insufficient funds in Pocket Hold.");
+    }
+    if (method === "mpesa" && !phone) {
+      return alert("Please enter your M-Pesa phone number.");
+    }
+    if (method === "bank" && (!bankName || !accountNumber || !accountName)) {
+      return alert("Please fill in bank details.");
+    }
+
+    setLoadingTransition(true);
     setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-    }, 2000);
+      setLoadingTransition(false);
+      setStep("confirm");
+    }, 700);
   };
 
-  const currentInvested = 1824512.50;
-  const withdrawable = currentInvested * 0.95; // 5% liquidity reserve simulation
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      const methodDetails = method === "mpesa" 
+        ? { phoneNumber: phone }
+        : { bankName, accountNumber, accountName };
 
-  if (success) {
+      const response = await fetch(`${API_URL}/api/payments/withdrawal-request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: Number(amount),
+          method: method === "mpesa" ? "M-Pesa" : "Bank",
+          methodDetails,
+        }),
+      });
+
+      if (response.ok) {
+        setStep("success");
+      } else {
+        const errData = await response.json();
+        alert(errData.error || "Failed to submit withdrawal request.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "An error occurred during submission.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 1. Success Screen
+  if (step === "success") {
     return (
       <DashboardLayout>
-        <div className="max-w-xl mx-auto flex flex-col items-center justify-center min-vh-[60vh] text-center animate-in zoom-in-95 duration-500 mt-20">
-           <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center mb-6">
-              <CheckCircle2 size={40} className="text-orange-500" />
-           </div>
-           <h1 className="text-3xl font-black mb-2 tracking-tighter text-foreground">Withdrawal Logged</h1>
-           <p className="text-muted-foreground mb-8 font-medium">Your request for <strong>{formatKSh(Number(amount))}</strong> has been queued for institutional processing. Funds will be disbursed within 24 hours.</p>
-           <button 
-             onClick={() => setSuccess(false)}
-             className="px-8 py-3 bg-primary text-primary-foreground rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all"
-           >
-              Return Home
-           </button>
+        <div className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[50vh] text-center animate-in zoom-in-95 duration-500">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
+            <CheckCircle2 size={24} className="text-emerald-500" />
+          </div>
+          <h1 className="text-xl font-black mb-2 tracking-tighter text-foreground">Withdrawal Requested</h1>
+          <p className="text-muted-foreground text-xs mb-6 leading-relaxed max-w-xs font-medium">
+            Withdrawal request received, a confirmation message will be sent to you as soon as the request is approved.
+          </p>
+          <Link
+            href="/dashboard"
+            className="w-full py-3 bg-foreground text-background hover:opacity-90 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-98 transition-all text-center"
+          >
+            Go to Dashboard
+          </Link>
         </div>
       </DashboardLayout>
     );
   }
 
+  // 2. Confirmation Screen
+  if (step === "confirm") {
+    return (
+      <DashboardLayout>
+        <div className="max-w-md mx-auto flex flex-col gap-5 font-sans mt-6">
+          <button
+            onClick={() => setStep("input")}
+            className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all cursor-pointer w-fit"
+          >
+            <ArrowLeft size={10} /> Back to edit
+          </button>
+
+          <div>
+            <h1 className="text-lg font-black tracking-tight text-foreground">Confirm Payout</h1>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Please verify payout destination details before proceeding.</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-5 shadow-lg space-y-3">
+            <div className="flex justify-between items-center py-1.5 border-b border-border/40">
+              <span className="text-[11px] text-muted-foreground font-medium">Withdrawal Amount</span>
+              <span className="font-numbers font-black text-sm text-foreground">{formatKSh(Number(amount))}</span>
+            </div>
+
+            <div className="flex justify-between items-center py-1.5 border-b border-border/40">
+              <span className="text-[11px] text-muted-foreground font-medium">Withdraw To</span>
+              <span className="text-[10px] font-black text-foreground uppercase tracking-wider">
+                {method === "mpesa" ? "M-Pesa" : "Bank Transfer"}
+              </span>
+            </div>
+
+            {method === "mpesa" ? (
+              <div className="flex justify-between items-center py-1.5">
+                <span className="text-[11px] text-muted-foreground font-medium">Phone Number</span>
+                <span className="text-xs font-bold text-foreground font-mono">{phone}</span>
+              </div>
+            ) : (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-muted-foreground font-medium">Bank Name</span>
+                  <span className="font-bold text-foreground">{bankName}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-muted-foreground font-medium">Account Number</span>
+                  <span className="font-bold text-foreground font-mono">{accountNumber}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-muted-foreground font-medium">Holder Name</span>
+                  <span className="font-bold text-foreground">{accountName}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            disabled={loading}
+            onClick={handleConfirm}
+            className="w-full py-3 bg-foreground text-background hover:opacity-90 disabled:opacity-50 text-center rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {loading ? (
+              <div className="w-3.5 h-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+            ) : (
+              <>Confirm Withdrawal</>
+            )}
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // 3. Input Screen (Default)
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto flex flex-col gap-10">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-           <div className="space-y-1">
-             <h1 className="text-4xl font-black mb-2 tracking-tighter">Liquidate Capital</h1>
-             <p className="text-muted-foreground font-medium italic">Withdraw earnings or capital to your linked account.</p>
-           </div>
-           <div className="px-5 py-3 bg-muted/30 border border-border/50 rounded-2xl flex items-center gap-4">
-              <div className="p-2 bg-primary/10 text-primary rounded-lg shrink-0">
-                 <Wallet size={16} />
-              </div>
-              <div className="flex flex-col">
-                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Withdrawable Balance</p>
-                 <p className="font-numbers font-black text-lg">{formatKSh(withdrawable)}</p>
-              </div>
-           </div>
+      <div className="max-w-md mx-auto flex flex-col gap-6 font-sans">
+        
+        {/* Title Bar */}
+        <div>
+          <h1 className="text-lg font-black tracking-tight text-foreground">Liquidate Capital</h1>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Withdraw uninvested funds to your linked accounts.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div className="md:col-span-2 space-y-8">
-             {/* Method Selection */}
-             <div className="flex gap-4 p-1 bg-muted/30 border border-border/50 rounded-2xl w-fit">
-                <button 
-                  onClick={() => setMethod("mpesa")}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black uppercase transition-all ${method === "mpesa" ? "bg-background shadow-lg text-primary" : "text-muted-foreground"}`}
-                >
-                  <Smartphone size={16} />
-                  M-Pesa 
-                </button>
-                <button 
-                  onClick={() => setMethod("bank")}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black uppercase transition-all ${method === "bank" ? "bg-background shadow-lg text-primary" : "text-muted-foreground"}`}
-                >
-                  <Landmark size={16} />
-                  KCB / Equity
-                </button>
-             </div>
+        {/* Real Numbers Pockets Cards (Pocket Hold and Pocket Yield) */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="px-3 py-2 bg-muted/40 border border-border/60 rounded-xl flex items-center gap-2">
+            <Wallet size={12} className="text-primary shrink-0" />
+            <div className="flex flex-col">
+              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Pocket Hold</p>
+              {fetching ? (
+                <Loader2 size={8} className="animate-spin text-muted-foreground mt-0.5" />
+              ) : (
+                <p className="font-numbers font-black text-xs text-foreground">{formatKSh(holdBalance)}</p>
+              )}
+            </div>
+          </div>
 
-             <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-xl space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Withdrawal Amount</label>
-                    <button 
-                      onClick={() => setAmount(withdrawable.toString())}
-                      className="text-[10px] text-primary hover:underline font-black uppercase tracking-widest"
-                    >
-                      Withdraw Max
-                    </button>
-                  </div>
+          <div className="px-3 py-2 bg-muted/40 border border-border/60 rounded-xl flex items-center gap-2">
+            <Wallet size={12} className="text-primary shrink-0" />
+            <div className="flex flex-col">
+              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Pocket Yield</p>
+              {fetching ? (
+                <Loader2 size={8} className="animate-spin text-muted-foreground mt-0.5" />
+              ) : (
+                <p className="font-numbers font-black text-xs text-foreground">{formatKSh(yieldBalance)}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Minimalist Tab Selectors */}
+        <div className="flex gap-1.5 p-1 bg-muted/30 border border-border/60 rounded-xl w-full">
+          <button 
+            type="button"
+            onClick={() => setMethod("mpesa")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+              method === "mpesa" 
+                ? "bg-foreground text-background shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Smartphone size={11} />
+            M-Pesa
+          </button>
+          <button 
+            type="button"
+            onClick={() => setMethod("bank")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+              method === "bank" 
+                ? "bg-foreground text-background shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Landmark size={11} />
+            Bank
+          </button>
+        </div>
+
+        {/* Input Form Card */}
+        <div className="bg-card border border-border/80 rounded-xl p-5 shadow-md space-y-4">
+          
+          {method === "mpesa" ? (
+            <div className="space-y-4">
+              {/* Phone number field comes first */}
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">M-Pesa Phone Number</label>
+                <input 
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-muted/10 border border-border rounded-lg px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-border transition-all"
+                />
+              </div>
+
+              {/* Amount field comes second */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Withdrawal Amount (KSh)</label>
+                  <button 
+                    type="button"
+                    onClick={() => setAmount(withdrawable.toString())}
+                    className="text-[8px] text-primary hover:underline font-black uppercase tracking-widest cursor-pointer"
+                  >
+                    Withdraw Max
+                  </button>
+                </div>
+                <input 
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full bg-muted/10 border border-border rounded-lg px-3.5 py-2.5 text-xs font-bold font-numbers focus:outline-none focus:ring-1 focus:ring-border transition-all text-foreground"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Bank Details come first */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Bank Name</label>
                   <input 
-                    type="number"
-                    placeholder="Enter amount"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="w-full bg-background/50 border border-border/50 rounded-xl px-5 py-4 text-3xl font-black font-numbers focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    type="text"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    className="w-full bg-muted/10 border border-border rounded-lg px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-border transition-all"
                   />
                 </div>
-
-                <div className="p-4 bg-muted/30 border border-border/50 rounded-xl space-y-4">
-                   <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recipient Details</span>
-                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase font-black tracking-widest border border-primary/20">Saved Linked Info</span>
-                   </div>
-                   {method === "mpesa" ? (
-                     <p className="font-black text-sm tracking-widest">254-712-***-901 (K. Omondi)</p>
-                   ) : (
-                     <p className="font-black text-sm tracking-widest">KCB Bank - 1184-****-**21 (InnerCircle Pool)</p>
-                   )}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Account Number</label>
+                  <input 
+                    type="text"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    className="w-full bg-muted/10 border border-border rounded-lg px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-border transition-all"
+                  />
                 </div>
+              </div>
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Account Holder Name</label>
+                <input 
+                  type="text"
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                  className="w-full bg-muted/10 border border-border rounded-lg px-3.5 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-border transition-all"
+                />
+              </div>
 
-                <button 
-                  disabled={!amount || loading || Number(amount) > withdrawable}
-                  onClick={handleWithdraw}
-                  className="w-full bg-primary text-primary-foreground py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 disabled:opacity-50 active:scale-95 transition-all flex items-center justify-center gap-3"
-                >
-                  {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Log Withdrawal <ArrowRight size={18} /></>}
-                </button>
-             </div>
-          </div>
-
-          <div className="space-y-6">
-             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-                <ShieldAlert size={60} className="absolute -bottom-4 -right-4 opacity-5 group-hover:scale-110 transition-transform text-primary" />
-                <h4 className="text-xs font-black uppercase tracking-widest mb-4">Payout Reserve Policy</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed font-bold mb-4 italic">
-                  Instant liquidations are available up to KSh 250,000. Larger amounts are subject to institutional clearing times.
-                </p>
-                <div className="flex items-center gap-2 text-[10px] text-primary font-black uppercase tracking-tighter">
-                   <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                   Secured by Portfolio Backing
+              {/* Amount field comes last */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Withdrawal Amount (KSh)</label>
+                  <button 
+                    type="button"
+                    onClick={() => setAmount(withdrawable.toString())}
+                    className="text-[8px] text-primary hover:underline font-black uppercase tracking-widest cursor-pointer"
+                  >
+                    Withdraw Max
+                  </button>
                 </div>
-             </div>
+                <input 
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full bg-muted/10 border border-border rounded-lg px-3.5 py-2.5 text-xs font-bold font-numbers focus:outline-none focus:ring-1 focus:ring-border transition-all text-foreground"
+                />
+              </div>
+            </div>
+          )}
 
-             <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-xl">
-                <h4 className="text-xs font-black uppercase tracking-widest mb-4">Disbursement breakdown</h4>
-                <div className="space-y-3">
-                   <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground font-bold">Gross Amount</span>
-                      <span className="font-numbers font-black">{amount ? formatKSh(Number(amount)) : "KSh 0.00"}</span>
-                   </div>
-                   <div className="flex justify-between text-xs text-orange-500">
-                      <span className="font-bold underline italic">Fund Management Fee</span>
-                      <span className="font-numbers font-black">- KSh 120.00</span>
-                   </div>
-                   <div className="pt-3 border-t border-border/50 flex justify-between font-black">
-                      <span className="text-xs uppercase tracking-widest">Net Disbursed</span>
-                      <span className="text-primary font-numbers">
-                         {amount ? formatKSh(Number(amount) - 120) : "KSh 0.00"}
-                      </span>
-                   </div>
-                </div>
-             </div>
-          </div>
+          {/* Continue Button */}
+          <button 
+            type="button"
+            disabled={loadingTransition || !amount || Number(amount) <= 0}
+            onClick={handleContinue}
+            className="w-full py-3 bg-foreground text-background hover:opacity-90 disabled:opacity-50 text-center rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {loadingTransition ? (
+              <div className="w-3.5 h-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+            ) : (
+              <>Continue</>
+            )}
+          </button>
+
         </div>
       </div>
     </DashboardLayout>
   );
-}
-
-function Smartphone({ size }: { size: number }) {
-   return (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-        <path d="M12 18h.01" />
-      </svg>
-   )
 }

@@ -3,182 +3,422 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { formatKSh } from "@/lib/utils";
-import { 
-  Smartphone, 
-  Building2, 
-  ArrowRight, 
-  ShieldCheck, 
-  Info,
-  CheckCircle2
-} from "lucide-react";
-
 import { API_URL } from "@/lib/api";
+import { 
+  Copy, 
+  Check, 
+  Upload, 
+  Clipboard, 
+  CheckCircle2,
+  QrCode,
+  Smartphone,
+  Calendar,
+  Clock,
+  ArrowLeft
+} from "lucide-react";
+import Link from "next/link";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useSystemSettings } from "@/components/system-settings-provider";
 
 export default function DepositPage() {
-  const [method, setMethod] = useState<"mpesa" | "bank">("mpesa");
-  const [amount, setAmount] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const { token } = useAuthStore();
+  const { settings } = useSystemSettings();
+  
+  const paybill = settings?.paybill_number || "880100";
+  const account = settings?.account_number || "339025";
 
-  const handleDeposit = async () => {
-    if (!amount || !phone) return alert("Enter amount and phone");
+  const [step, setStep] = useState<"input" | "confirm" | "success">("input");
+  const [amount, setAmount] = useState("");
+  const [referenceCode, setReferenceCode] = useState("");
+  const [mode, setMode] = useState<"none" | "upload" | "paste">("none");
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [smsMessage, setSmsMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [copiedPaybill, setCopiedPaybill] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState(false);
+  const [dateTime, setDateTime] = useState({ date: "", time: "" });
+
+  const copyToClipboard = (text: string, type: "paybill" | "account") => {
+    navigator.clipboard.writeText(text);
+    if (type === "paybill") {
+      setCopiedPaybill(true);
+      setTimeout(() => setCopiedPaybill(false), 2000);
+    } else {
+      setCopiedAccount(true);
+      setTimeout(() => setCopiedAccount(false), 2000);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setFilePreview(URL.createObjectURL(selectedFile));
+    }
+  };
+
+  const handleContinue = () => {
+    if (!amount || Number(amount) <= 0) {
+      return alert("Please enter a valid deposit amount.");
+    }
+    const now = new Date();
+    setDateTime({
+      date: now.toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" }),
+      time: now.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })
+    });
+    setStep("confirm");
+  };
+
+  const handleUpload = async (selectedFile: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("proof", selectedFile);
+
+    const response = await fetch(`${API_URL}/api/payments/upload-proof`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Screenshot upload failed");
+    }
+
+    const data = await response.json();
+    return data.fileUrl;
+  };
+
+  const handleConfirm = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/payments/stk-push`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Bearer ${localStorage.getItem("token")}` 
-        },
-        body: JSON.stringify({ amount, phoneNumber: phone })
-      });
-      if (response.ok) {
-        setSuccess(true);
+      let screenshotUrl = "";
+      if (mode === "upload" && file) {
+        screenshotUrl = await handleUpload(file);
       }
-    } catch (err) {
-      alert("Payment failed");
+
+      const methodDetails = {
+        referenceCode,
+        smsMessage: mode === "paste" ? smsMessage : "",
+        screenshotUrl,
+      };
+
+      const response = await fetch(`${API_URL}/api/payments/deposit-request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: Number(amount),
+          method: "Manual",
+          methodDetails,
+        }),
+      });
+
+      if (response.ok) {
+        setStep("success");
+      } else {
+        const errData = await response.json();
+        alert(errData.error || "Failed to submit deposit request.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "An error occurred during submission.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (success) {
+  // 1. Success Screen
+  if (step === "success") {
     return (
       <DashboardLayout>
-        <div className="max-w-xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500">
-           <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-              <CheckCircle2 size={40} className="text-green-500" />
-           </div>
-           <h1 className="text-3xl font-black mb-2 tracking-tighter">Request Sent</h1>
-           <p className="text-muted-foreground mb-8">Please check your phone for the M-Pesa prompt and enter your PIN to complete the deposit of <strong>{formatKSh(Number(amount))}</strong>.</p>
-           <button 
-             onClick={() => setSuccess(false)}
-             className="px-8 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all"
-           >
-              Done
-           </button>
+        <div className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center animate-in zoom-in-95 duration-500">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
+            <CheckCircle2 size={32} className="text-emerald-500" />
+          </div>
+          <h1 className="text-2xl font-black mb-3 tracking-tighter text-foreground">Deposit Sent</h1>
+          <p className="text-muted-foreground text-sm mb-8 leading-relaxed max-w-sm font-medium">
+            System will reflect after few minutes. We will send a notification once done.
+          </p>
+          <Link
+            href="/dashboard"
+            className="w-full py-4 bg-foreground text-background hover:opacity-90 rounded-xl text-xs font-black uppercase tracking-widest active:scale-98 transition-all text-center"
+          >
+            Go to Dashboard
+          </Link>
         </div>
       </DashboardLayout>
     );
   }
 
+  // 2. Confirmation Screen
+  if (step === "confirm") {
+    return (
+      <DashboardLayout>
+        <div className="max-w-md mx-auto flex flex-col gap-6 font-sans mt-10">
+          <button
+            onClick={() => setStep("input")}
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all cursor-pointer w-fit"
+          >
+            <ArrowLeft size={12} /> Back to edit
+          </button>
+
+          <div className="text-center md:text-left">
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Confirm Deposit</h1>
+            <p className="text-xs text-muted-foreground mt-1">Please review the details before finalizing your request.</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="flex justify-between items-center py-2 border-b border-border/40">
+              <span className="text-xs text-muted-foreground font-medium">Deposit Amount</span>
+              <span className="font-numbers font-black text-lg text-foreground">{formatKSh(Number(amount))}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-2 border-b border-border/40">
+              <span className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                <Calendar size={13} className="text-muted-foreground" /> Date
+              </span>
+              <span className="text-xs font-bold text-foreground">{dateTime.date}</span>
+            </div>
+
+            <div className="flex justify-between items-center py-2">
+              <span className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                <Clock size={13} className="text-muted-foreground" /> Time
+              </span>
+              <span className="text-xs font-bold text-foreground">{dateTime.time}</span>
+            </div>
+          </div>
+
+          <button
+            disabled={loading}
+            onClick={handleConfirm}
+            className="w-full py-4 bg-foreground text-background hover:opacity-90 disabled:opacity-50 text-center rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+            ) : (
+              <>Confirm Deposit</>
+            )}
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // 3. Input Screen (Default)
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto flex flex-col gap-10">
-        <div>
-          <h1 className="text-4xl font-black mb-2 tracking-tighter">Add Capital</h1>
-          <p className="text-muted-foreground font-medium italic">Increase your institutional weight by funding your account.</p>
+      <div className="max-w-2xl mx-auto flex flex-col gap-8 font-sans">
+        
+        {/* Title */}
+        <div className="text-center md:text-left">
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Add Capital</h1>
+          <p className="text-xs text-muted-foreground mt-1">Fund your account via M-Pesa. Admin confirms transactions manually.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div className="md:col-span-2 space-y-8">
-             {/* Method Selection */}
-             <div className="flex gap-4 p-1 bg-muted/30 border border-border/50 rounded-2xl w-fit">
-                <button 
-                  onClick={() => setMethod("mpesa")}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black uppercase transition-all ${method === "mpesa" ? "bg-background shadow-lg text-primary" : "text-muted-foreground"}`}
-                >
-                  <Smartphone size={16} />
-                  M-Pesa STK
-                </button>
-                <button 
-                  onClick={() => setMethod("bank")}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black uppercase transition-all ${method === "bank" ? "bg-background shadow-lg text-primary" : "text-muted-foreground"}`}
-                >
-                  <Building2 size={16} />
-                  Bank Transfer
-                </button>
-             </div>
+        {/* Highlighted Payment Instructions & QR Code Side-by-Side */}
+        <div className="bg-card border border-border/80 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-6 items-center justify-between">
+          
+          {/* Left Side: Highlighted Paybills */}
+          <div className="flex-1 w-full space-y-4">
+            <div className="flex items-center gap-2">
+              <Smartphone size={16} className="text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">M-Pesa Payment Details</span>
+            </div>
 
-             {method === "mpesa" ? (
-               <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-xl space-y-6 animate-in slide-in-from-left-4 duration-500">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount (KSh)</label>
-                    <input 
-                      type="number"
-                      placeholder="e.g. 50,000"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full bg-background/50 border border-border/50 rounded-xl px-5 py-4 text-2xl font-black font-numbers focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">M-Pesa Number</label>
-                    <input 
-                      type="tel"
-                      placeholder="2547XXXXXXXX"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-background/50 border border-border/50 rounded-xl px-5 py-3 text-lg font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                  </div>
-                  <button 
-                    disabled={!amount || loading}
-                    onClick={handleDeposit}
-                    className="w-full bg-primary text-primary-foreground py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 disabled:opacity-50 active:scale-95 transition-all flex items-center justify-center gap-3"
-                  >
-                    {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Initiate Deposit <ArrowRight size={18} /></>}
-                  </button>
-               </div>
-             ) : (
-               <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-xl space-y-6 animate-in slide-in-from-right-4 duration-500">
-                  <div className="p-6 bg-muted/30 border border-border/50 rounded-2xl space-y-4">
-                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Bank Name</p>
-                        <p className="font-black text-lg">Equity Bank (InnerCircle Trust)</p>
-                     </div>
-                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Account Number</p>
-                        <p className="font-black text-lg tracking-widest">0982-1234-5678-90</p>
-                     </div>
-                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Account Name</p>
-                        <p className="font-black text-lg">INNERCIRCLE INVESTMENTS LTD</p>
-                     </div>
-                  </div>
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex gap-3">
-                     <Info size={20} className="text-primary shrink-0 mt-0.5" />
-                     <p className="text-xs text-muted-foreground leading-relaxed font-bold">
-                        Please include your Investor ID as the reference for faster processing. Transfers take 1-4 hours to reflect.
-                     </p>
-                  </div>
-               </div>
-             )}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 bg-muted/40 border border-border/60 rounded-xl">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">Paybill Number</p>
+                  <p className="font-numbers font-black text-2xl text-foreground tracking-tight">{paybill}</p>
+                </div>
+                <button 
+                  onClick={() => copyToClipboard(paybill, "paybill")}
+                  className="p-2.5 hover:bg-muted/80 rounded-lg text-muted-foreground hover:text-foreground transition-all shrink-0 cursor-pointer"
+                >
+                  {copiedPaybill ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted/40 border border-border/60 rounded-xl">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">Account Number</p>
+                  <p className="font-numbers font-black text-2xl text-foreground tracking-tight">{account}</p>
+                </div>
+                <button 
+                  onClick={() => copyToClipboard(account, "account")}
+                  className="p-2.5 hover:bg-muted/80 rounded-lg text-muted-foreground hover:text-foreground transition-all shrink-0 cursor-pointer"
+                >
+                  {copiedAccount ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-6">
-             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-                <ShieldCheck size={60} className="absolute -bottom-4 -right-4 opacity-5 group-hover:rotate-12 transition-transform text-primary" />
-                <h4 className="text-xs font-black uppercase tracking-widest mb-4">Security Notice</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed font-bold mb-4 italic">
-                  All transactions are encrypted and audited through our custodial partnership with major Kenyan banks.
-                </p>
-                <div className="flex items-center gap-2 text-[10px] text-green-500 font-black uppercase tracking-tighter">
-                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                   EAT Compliance Verified
-                </div>
-             </div>
-
-             <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-xl">
-                <h4 className="text-xs font-black uppercase tracking-widest mb-4">Summary</h4>
-                <div className="space-y-3">
-                   <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground font-bold">Base Deposit</span>
-                      <span className="font-numbers font-black">{amount ? formatKSh(Number(amount)) : "KSh 0.00"}</span>
-                   </div>
-                   <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground font-bold italic">Transaction Fee</span>
-                      <span className="font-numbers font-black text-muted-foreground">KSh 0.00</span>
-                   </div>
-                   <div className="pt-3 border-t border-border/50 flex justify-between font-black">
-                      <span className="text-xs uppercase tracking-widest">Total Weight</span>
-                      <span className="text-primary font-numbers">{amount ? formatKSh(Number(amount)) : "KSh 0.00"}</span>
-                   </div>
-                </div>
-             </div>
+          {/* Right Side: QR Code */}
+          <div className="flex flex-col items-center justify-center p-4 bg-muted/20 border border-border/40 rounded-xl shrink-0 w-full md:w-[190px]">
+            <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border bg-black/40 flex items-center justify-center">
+              <img 
+                src="/qr_code.png" 
+                alt="Payment QR Code" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-3 flex items-center gap-1.5">
+              <QrCode size={11} className="text-primary" />
+              Scan Here to Deposit
+            </p>
           </div>
+
         </div>
+
+        {/* Main Form Fields */}
+        <div className="space-y-6">
+          
+          {/* Amount field */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">Amount Paid (KSh)</label>
+            <input 
+              type="number"
+              placeholder="e.g. 50,000"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-muted/20 border border-border rounded-xl px-5 py-4 text-2xl font-black font-numbers focus:outline-none focus:ring-1 focus:ring-border transition-all text-foreground"
+            />
+          </div>
+
+          {/* Minimalist selection buttons for proof method (completely optional) */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">Verification Proof (Optional)</label>
+              {mode !== "none" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("none");
+                    setFile(null);
+                    setFilePreview(null);
+                    setSmsMessage("");
+                  }}
+                  className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Clear Proof
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setMode("upload")}
+                className={`py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  mode === "upload" 
+                    ? "bg-foreground text-background border-foreground" 
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+              >
+                <Upload size={13} />
+                Upload Screenshot
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode("paste")}
+                className={`py-3 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  mode === "paste" 
+                    ? "bg-foreground text-background border-foreground" 
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+              >
+                <Clipboard size={13} />
+                Paste Payment Message
+              </button>
+            </div>
+          </div>
+
+          {/* Verification input fields based on selection */}
+          {mode !== "none" && (
+            <div className="bg-card/30 border border-border/40 rounded-xl p-5 space-y-4 animate-in fade-in duration-300">
+              
+              {mode === "upload" && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Screenshot Image</label>
+                  <div className="border border-dashed border-border rounded-xl p-6 flex flex-col items-center justify-center text-center relative hover:bg-muted/10 transition-all cursor-pointer">
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    
+                    {filePreview ? (
+                      <div className="space-y-3 w-full flex flex-col items-center">
+                        <img 
+                          src={filePreview} 
+                          alt="Screenshot Preview" 
+                          className="max-h-[140px] rounded-lg border object-contain shadow-sm"
+                        />
+                        <p className="text-[9px] font-bold text-foreground truncate max-w-xs">{file?.name}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <Upload size={16} className="text-muted-foreground mx-auto" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Choose receipt screenshot</p>
+                        <p className="text-[8px] text-muted-foreground">PNG, JPG up to 5MB</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {mode === "paste" && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Payment SMS Message</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Paste the transactional SMS received here..."
+                    value={smsMessage}
+                    onChange={(e) => setSmsMessage(e.target.value)}
+                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-xs font-mono focus:outline-none transition-all text-foreground leading-relaxed"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Transaction Reference Code</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. QND5X9Y2P0"
+                  value={referenceCode}
+                  onChange={(e) => setReferenceCode(e.target.value.toUpperCase())}
+                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-xs font-mono font-bold tracking-widest uppercase focus:outline-none text-foreground"
+                />
+              </div>
+
+            </div>
+          )}
+
+          {/* Bottom Actions: Skip & Continue */}
+          <div className="flex items-center gap-4 pt-4">
+            <Link
+              href="/dashboard"
+              className="flex-1 py-4 border border-border text-center rounded-xl text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all active:scale-98"
+            >
+              Skip
+            </Link>
+
+            <button
+              onClick={handleContinue}
+              className="flex-1 py-4 bg-foreground text-background hover:opacity-90 text-center rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Continue
+            </button>
+          </div>
+
+        </div>
+
       </div>
     </DashboardLayout>
   );

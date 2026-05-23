@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowRightLeft, ShieldCheck, TrendingUp } from "lucide-react";
 
 const steps = [

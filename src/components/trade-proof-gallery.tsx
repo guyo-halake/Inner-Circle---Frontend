@@ -10,8 +10,10 @@ import {
   TrendingUp,
   TrendingDown
 } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export function TradeProofGallery() {
+  const { token } = useAuthStore();
   const [proofs, setProofs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +21,7 @@ export function TradeProofGallery() {
     const fetchProofs = async () => {
       try {
         const response = await fetch(`${API_URL}/api/portfolio/proofs`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
         setProofs(data);

@@ -8,15 +8,18 @@ export function ROICalculator() {
   const [duration, setDuration] = useState(12); // 12 months
   const [expectedValue, setExpectedValue] = useState(0);
 
-  const monthlyReturn = 0.035; // 3.5% monthly return
+  const monthlyRate = 0.05; // 5% simple monthly return (30% per 6 months)
+  const dailyRate = monthlyRate / 30; // ~0.1667% daily return
 
   useEffect(() => {
-    // A simple compound interest formula for estimation
-    const total = investment * Math.pow(1 + monthlyReturn, duration);
+    // Linear calculation: 5% simple interest per month
+    const total = investment * (1 + (duration * monthlyRate));
     setExpectedValue(total);
   }, [investment, duration]);
 
   const profit = expectedValue - investment;
+  const monthlyProfit = investment * monthlyRate;
+  const dailyProfit = investment * dailyRate;
 
   return (
     <div className="py-24 bg-background">
@@ -77,7 +80,7 @@ export function ROICalculator() {
               </h3>
             </div>
 
-            <div className="w-full space-y-6 pt-6 border-t border-primary/10">
+            <div className="w-full space-y-4 pt-6 border-t border-primary/10">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Investment</span>
                 <span className="font-numbers font-medium">{formatKSh(investment)}</span>
@@ -88,7 +91,15 @@ export function ROICalculator() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">ROI Percentage</span>
-                <span className="text-primary font-numbers font-bold">+{( (profit/investment) * 100).toFixed(1)}%</span>
+                <span className="text-primary font-numbers font-bold">+{((profit / investment) * 100).toFixed(1)}%</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-dashed border-primary/10">
+                <span className="text-sm text-muted-foreground">Monthly Return (5.0%)</span>
+                <span className="text-primary font-numbers font-semibold">+{formatKSh(monthlyProfit)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Daily Return (0.17%)</span>
+                <span className="text-primary font-numbers font-semibold">+{formatKSh(dailyProfit)}</span>
               </div>
             </div>
           </div>

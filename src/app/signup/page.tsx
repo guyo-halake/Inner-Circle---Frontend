@@ -76,8 +76,12 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="p-6 flex justify-between items-center">
-        <NextLink href="/" className="text-xl font-bold tracking-tight">
-          InnerCircle
+        <NextLink href="/" className="hover:opacity-80 transition-opacity">
+          <img 
+            src="/WhatsApp_Image_2026-05-23_at_13.40.38-removebg-preview.png" 
+            alt="InnerCircle Logo" 
+            className="h-10 w-auto object-contain" 
+          />
         </NextLink>
         <ThemeToggle />
       </header>
@@ -255,6 +259,10 @@ export default function SignUpPage() {
           </div>
         </div>
       </main>
+
+      <footer className="p-8 border-t text-center text-xs text-muted-foreground leading-relaxed">
+        © 2026 InnerCircle Investor Platform. All rights reserved.<br />Developed by P3L Developers, Matta.
+      </footer>
     </div>
   );
 }

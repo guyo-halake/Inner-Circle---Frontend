@@ -4,9 +4,9 @@ import Link from "next/link";
 import { ArrowDownToLine, ArrowUpFromLine, History, PieChart } from "lucide-react";
 
 const actions = [
-  { name: "Deposit Funds", href: "/transactions?tab=Deposit", icon: ArrowDownToLine },
-  { name: "Withdraw Funds", href: "/transactions?tab=Withdraw", icon: ArrowUpFromLine },
-  { name: "View History", href: "/transactions?tab=History", icon: History },
+  { name: "Deposit Funds", href: "/deposit", icon: ArrowDownToLine },
+  { name: "Withdraw Funds", href: "/withdraw", icon: ArrowUpFromLine },
+  { name: "View History", href: "/transactions", icon: History },
   { name: "Portfolio", href: "/portfolio", icon: PieChart },
 ];
 
