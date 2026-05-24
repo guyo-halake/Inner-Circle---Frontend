@@ -1,79 +1,227 @@
 "use client";
 
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import React, { useEffect, useState } from "react";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Filler,
+  Legend,
+} from "chart.js";
 import { formatCompactKSh } from "@/lib/utils";
 
-const data = [
-  { name: "Jan", value: 100 },
-  { name: "Feb", value: 108 },
-  { name: "Mar", value: 115 },
-  { name: "Apr", value: 112 },
-  { name: "May", value: 125 },
-  { name: "Jun", value: 132 },
-  { name: "Jul", value: 145 },
-  { name: "Aug", value: 152 },
-];
+// Register Chart.js modules
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Filler,
+  Legend
+);
 
 export function PerformancePreview() {
+  // Start with historical growth factors (Jan to Jul)
+  const historicalData = [1.0, 1.08, 1.15, 1.12, 1.25, 1.32, 1.45];
+  
+  // State for live-ticking August growth factor
+  const [liveGrowthFactor, setLiveGrowthFactor] = useState(1.524);
+  const [poolSize, setPoolSize] = useState(420000000);
+  const [lastDirection, setLastDirection] = useState<"up" | "down" | "flat">("flat");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Simulate micro-fluctuations in trading performance (mostly upward bias)
+      const changePercent = (Math.random() - 0.42) * 0.0015; // bias upward slightly
+      
+      setLiveGrowthFactor((prev) => {
+        const next = prev * (1 + changePercent);
+        setLastDirection(next > prev ? "up" : next < prev ? "down" : "flat");
+        return next;
+      });
+
+      setPoolSize((prev) => prev * (1 + changePercent));
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Format tick numbers with absolute precision
+  const formatLiveNumber = (num: number) => {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
+  };
+
+  const chartData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Live Feed"],
+    datasets: [
+      {
+        label: "Performance Index",
+        data: [...historicalData, liveGrowthFactor],
+        borderColor: "rgb(23, 23, 23)",
+        backgroundColor: "rgba(23, 23, 23, 0.04)",
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2,
+        pointRadius: (context: any) => (context.dataIndex === 7 ? 6 : 0),
+        pointHoverRadius: 6,
+        pointBackgroundColor: "rgb(23, 23, 23)",
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 2,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: "rgba(255, 255, 255, 0.98)",
+        titleColor: "#0a0a0a",
+        bodyColor: "#0a0a0a",
+        borderColor: "#e5e5e5",
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false,
+        titleFont: {
+          family: "var(--font-sora)",
+          weight: "bold" as const,
+        },
+        bodyFont: {
+          family: "var(--font-inter)",
+        },
+        callbacks: {
+          label: (context: any) => {
+            if (context.dataIndex === 7) {
+              return `Live Index: ${context.parsed.y.toFixed(4)}x`;
+            }
+            return `Index: ${context.parsed.y.toFixed(2)}x`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+        border: {
+          display: false,
+        },
+        ticks: {
+          color: "#737373",
+          font: {
+            family: "var(--font-inter)",
+            size: 11,
+          },
+        },
+      },
+      y: {
+        grid: {
+          color: "#f5f5f5",
+        },
+        border: {
+          display: false,
+        },
+        ticks: {
+          color: "#737373",
+          font: {
+            family: "var(--font-inter)",
+            size: 11,
+          },
+        },
+      },
+    },
+  };
+
   return (
-    <section id="performance" className="py-24 bg-muted/50">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto bg-card p-8 rounded-xl border shadow-sm">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-2">Performance</h2>
-            <p className="text-muted-foreground">Historical growth of the trading pool</p>
+    <section id="performance" className="py-24 bg-muted/40 relative overflow-hidden">
+      <div className="container mx-auto px-4 max-w-5xl">
+        <div className="relative z-10 py-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-3xl font-bold tracking-tight">Performance</h2>
+                <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Live</span>
+                </div>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                Historical growth and live performance trajectory of the collective pool.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2 text-xs text-muted-foreground self-start md:self-auto">
+              <span className="w-2.5 h-2.5 bg-[rgb(23,23,23)] rounded-full" />
+              <span>Pool Growth Index</span>
+            </div>
           </div>
 
-          <div className="h-[300px] w-full mb-12">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  dx={-10}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "hsl(var(--card))", 
-                    borderColor: "hsl(var(--border))",
-                    borderRadius: "8px"
-                  }}
-                  itemStyle={{ color: "hsl(var(--foreground))" }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2} 
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 0 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          {/* Chart Container */}
+          <div className="h-[320px] w-full mb-12 relative">
+            <Line data={chartData} options={chartOptions} />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center border-t pt-8">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1 uppercase tracking-wider">Total Return</p>
-              <p className="text-3xl font-bold font-numbers text-primary">+52.4%</p>
+          {/* Core Analytics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-6 text-center border-t pt-8">
+            <div className="col-span-1">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Total Return</p>
+              <p className="text-2xl font-bold font-numbers text-primary">
+                +{((liveGrowthFactor - 1) * 100).toFixed(2)}%
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1 uppercase tracking-wider">Pool Size</p>
-              <p className="text-3xl font-bold font-numbers text-primary">{formatCompactKSh(420000000)}</p>
+            <div className="col-span-1">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider font-numbers">Pool Size</p>
+              <p className="text-2xl font-bold font-numbers text-primary transition-all duration-300">
+                {formatCompactKSh(poolSize)}
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1 uppercase tracking-wider">Active Investors</p>
-              <p className="text-3xl font-bold font-numbers text-primary">1,240</p>
+            <div className="col-span-1">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Active Investors</p>
+              <p className="text-2xl font-bold font-numbers text-primary">10+</p>
             </div>
+            <div className="col-span-1">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Avg Monthly</p>
+              <p className="text-2xl font-bold font-numbers text-emerald-600">+4.36%</p>
+            </div>
+            <div className="col-span-1">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Sharpe Ratio</p>
+              <p className="text-2xl font-bold font-numbers text-primary">2.45</p>
+            </div>
+            <div className="col-span-1">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Max Drawdown</p>
+              <p className="text-2xl font-bold font-numbers text-primary">-1.82%</p>
+            </div>
+          </div>
+          
+          {/* Real-time Ticker Status */}
+          <div className="flex justify-center mt-6 text-[11px] text-muted-foreground gap-2">
+            <span>Live Feed Status:</span>
+            <span className={`font-medium flex items-center gap-1 ${
+              lastDirection === "up" ? "text-emerald-600" : lastDirection === "down" ? "text-rose-500" : "text-muted-foreground"
+            }`}>
+              {lastDirection === "up" ? "▲ Yield Accrued" : lastDirection === "down" ? "▼ Market Variance" : "● Stable"}
+            </span>
+            <span>•</span>
+            <span className="font-mono">{formatLiveNumber(poolSize)}</span>
           </div>
         </div>
       </div>

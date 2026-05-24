@@ -1,64 +1,125 @@
 "use client";
 
-import { useState } from "react";
-import Link from "react-hook-form";
+import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ThemeToggle } from "@/components/theme-toggle";
-import NextLink from "next/link";
 import { API_URL } from "@/lib/api";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, Search, Check, AlertCircle } from "lucide-react";
+
+// List of all countries
+const countries = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+  "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czechia",
+  "Democratic Republic of the Congo", "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+  "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+  "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+  "Haiti", "Honduras", "Hungary",
+  "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Ivory Coast",
+  "Jamaica", "Japan", "Jordan",
+  "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+  "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+  "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
+  "Oman",
+  "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+  "Qatar",
+  "Romania", "Russia", "Rwanda",
+  "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+  "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States of America", "Uruguay", "Uzbekistan",
+  "Vanuatu", "Venezuela", "Vietnam",
+  "Yemen",
+  "Zambia", "Zimbabwe"
+];
 
 const signUpSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
   phone: z.string().min(6, { message: "Invalid phone number" }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  confirmPassword: z.string().min(8, { message: "Confirm password must be at least 8 characters" }),
   country: z.string().min(2, { message: "Country is required" }),
-  currency: z.string().min(3, { message: "Currency is required" }),
   agreement: z.boolean().refine((val) => val === true, {
-    message: "You must agree to the terms and risk notice",
+    message: "You must agree to the terms and conditions",
   }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
-  const [step, setStep] = useState(1);
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [countrySearch, setCountrySearch] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const {
     register,
     handleSubmit,
+    setValue,
     trigger,
     formState: { errors, isSubmitting },
   } = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       agreement: false,
+      country: "",
     },
   });
 
-  const nextStep = async () => {
-    let fields: (keyof SignUpFormValues)[] = [];
-    if (step === 1) {
-      fields = ["fullName", "email", "password"];
-    } else if (step === 2) {
-      fields = ["phone", "country", "currency"];
+  // Handle outside click to close country dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
     }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    const isValid = await trigger(fields);
-    if (isValid) setStep(step + 1);
+  const selectCountry = (country: string) => {
+    setSelectedCountry(country);
+    setValue("country", country, { shouldValidate: true });
+    setIsDropdownOpen(false);
+    setCountrySearch("");
   };
 
-  const prevStep = () => setStep(step - 1);
+  const filteredCountries = countries.filter((c) =>
+    c.toLowerCase().includes(countrySearch.toLowerCase())
+  );
 
   const onSubmit = async (data: SignUpFormValues) => {
     try {
+      const nameParts = data.fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      const payload = {
+        fullName: data.fullName,
+        firstName,
+        lastName,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
+        country: data.country,
+        role: "Investor", // Enforces ONLY Investor creation
+      };
+
       const response = await fetch(`${API_URL}/api/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -74,194 +135,205 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="p-6 flex justify-between items-center">
-        <NextLink href="/" className="hover:opacity-80 transition-opacity">
+    <div className="min-h-screen flex flex-col bg-muted/20 relative overflow-hidden">
+      {/* Background radial decoration */}
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(23,23,23,0.03)_0%,transparent_60%)] pointer-events-none" />
+
+      <header className="p-6 flex justify-between items-center relative z-10">
+        <Link href="/" className="hover:opacity-90 transition-opacity">
           <img 
             src="/WhatsApp_Image_2026-05-23_at_13.40.38-removebg-preview.png" 
             alt="InnerCircle Logo" 
-            className="h-10 w-auto object-contain" 
+            className="h-16 w-auto object-contain" 
           />
-        </NextLink>
+        </Link>
         <ThemeToggle />
       </header>
 
-      <main className="flex-grow flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-card border rounded-xl shadow-sm p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mb-2">Create Account</h1>
-            <div className="flex justify-center items-center gap-2 mt-4">
-              {[1, 2, 3].map((s) => (
-                <div
-                  key={s}
-                  className={`h-1 w-12 rounded-full transition-colors ${
-                    s <= step ? "bg-primary" : "bg-muted"
-                  }`}
-                />
-              ))}
-            </div>
+      <main className="flex-grow flex items-center justify-center p-4 relative z-10">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 100, damping: 15 }}
+          className="w-full max-w-lg bg-card border rounded-2xl shadow-lg shadow-black/[0.02] p-8 md:p-10 relative overflow-hidden"
+        >
+          {/* Card Top Logo */}
+          <div className="flex flex-col items-center mb-8">
+            <img 
+              src="/WhatsApp_Image_2026-05-23_at_13.40.38-removebg-preview.png" 
+              alt="InnerCircle Logo" 
+              className="h-20 w-auto object-contain mb-4" 
+            />
+            <h1 className="text-xl font-bold tracking-tight mb-1">Create your account</h1>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {step === 1 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Full Name</label>
-                  <input
-                    {...register("fullName")}
-                    placeholder="John Doe"
-                    className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                      errors.fullName ? "border-destructive" : "border-input"
-                    }`}
-                  />
-                  {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Email</label>
-                  <input
-                    {...register("email")}
-                    type="email"
-                    placeholder="name@example.com"
-                    className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                      errors.email ? "border-destructive" : "border-input"
-                    }`}
-                  />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Password</label>
-                  <input
-                    {...register("password")}
-                    type="password"
-                    placeholder="••••••••"
-                    className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                      errors.password ? "border-destructive" : "border-input"
-                    }`}
-                  />
-                  {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
-                </div>
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="w-full bg-primary text-primary-foreground py-2 rounded-md font-medium hover:opacity-90 transition-opacity"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Full Name */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Full Name</label>
+              <input
+                {...register("fullName")}
+                className={`w-full px-4 py-2.5 bg-background border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                  errors.fullName ? "border-destructive" : "border-input"
+                }`}
+              />
+              {errors.fullName && <p className="text-[11px] text-destructive font-medium">{errors.fullName.message}</p>}
+            </div>
 
-            {step === 2 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Phone Number</label>
-                  <input
-                    {...register("phone")}
-                    placeholder="+1 (555) 000-0000"
-                    className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                      errors.phone ? "border-destructive" : "border-input"
-                    }`}
-                  />
-                  {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Country</label>
-                  <input
-                    {...register("country")}
-                    placeholder="United States"
-                    className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                      errors.country ? "border-destructive" : "border-input"
-                    }`}
-                  />
-                  {errors.country && <p className="text-xs text-destructive">{errors.country.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Preferred Currency</label>
-                  <select
-                    {...register("currency")}
-                    className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                      errors.currency ? "border-destructive" : "border-input"
-                    }`}
-                  >
-                    <option value="">Select currency</option>
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                  </select>
-                  {errors.currency && <p className="text-xs text-destructive">{errors.currency.message}</p>}
-                </div>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="flex-1 border border-border bg-background py-2 rounded-md font-medium hover:bg-accent transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={nextStep}
-                    className="flex-1 bg-primary text-primary-foreground py-2 rounded-md font-medium hover:opacity-90 transition-opacity"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email Address</label>
+              <input
+                {...register("email")}
+                type="email"
+                className={`w-full px-4 py-2.5 bg-background border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                  errors.email ? "border-destructive" : "border-input"
+                }`}
+              />
+              {errors.email && <p className="text-[11px] text-destructive font-medium">{errors.email.message}</p>}
+            </div>
 
-            {step === 3 && (
-              <div className="space-y-6">
-                <div className="bg-muted p-4 rounded-md">
-                  <h4 className="text-sm font-semibold mb-2">Risk Notice</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Investing involves risk of loss. The value of your investment can go down as well as up. 
-                    Past performance is not a guarantee of future results. By proceeding, you acknowledge 
-                    that you understand the risks associated with managed trading pools.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <input
-                    id="agreement"
-                    type="checkbox"
-                    {...register("agreement")}
-                    className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary/20"
-                  />
-                  <label htmlFor="agreement" className="text-sm text-muted-foreground">
-                    I agree to the terms of service and acknowledge the risk notice.
-                  </label>
-                </div>
-                {errors.agreement && <p className="text-xs text-destructive">{errors.agreement.message}</p>}
-                
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="flex-1 border border-border bg-background py-2 rounded-md font-medium hover:bg-accent transition-colors"
+            {/* Phone Number */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Phone Number</label>
+              <input
+                {...register("phone")}
+                type="tel"
+                className={`w-full px-4 py-2.5 bg-background border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                  errors.phone ? "border-destructive" : "border-input"
+                }`}
+              />
+              {errors.phone && <p className="text-[11px] text-destructive font-medium">{errors.phone.message}</p>}
+            </div>
+
+            {/* Country Dropdown with Search */}
+            <div className="space-y-1.5 relative" ref={dropdownRef}>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Country</label>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className={`w-full px-4 py-2.5 bg-background border rounded-xl text-sm flex items-center justify-between text-left focus:outline-none focus:ring-1 focus:ring-primary ${
+                  errors.country ? "border-destructive" : "border-input"
+                }`}
+              >
+                <span className={selectedCountry ? "text-foreground" : "text-muted-foreground"}>
+                  {selectedCountry || "Select your country"}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </button>
+
+              <AnimatePresence>
+                {isDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 5 }}
+                    className="absolute z-20 left-0 right-0 mt-1 bg-card border rounded-xl shadow-lg max-h-60 overflow-hidden flex flex-col"
                   >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 bg-primary text-primary-foreground py-2 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                  >
-                    {isSubmitting ? "Creating..." : "Create account"}
-                  </button>
-                </div>
-              </div>
-            )}
+                    {/* Search Field */}
+                    <div className="p-2 border-b flex items-center gap-2 bg-muted/40">
+                      <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Search countries..."
+                        value={countrySearch}
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                        className="w-full bg-transparent text-xs focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Options list */}
+                    <div className="overflow-y-auto flex-grow py-1">
+                      {filteredCountries.length > 0 ? (
+                        filteredCountries.map((country) => (
+                          <button
+                            key={country}
+                            type="button"
+                            onClick={() => selectCountry(country)}
+                            className="w-full px-4 py-2 text-left text-xs hover:bg-muted transition-colors flex items-center justify-between cursor-pointer"
+                          >
+                            <span>{country}</span>
+                            {selectedCountry === country && <Check className="w-3.5 h-3.5 text-primary" />}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-3 text-center text-xs text-muted-foreground">
+                          No countries found
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {errors.country && <p className="text-[11px] text-destructive font-medium">{errors.country.message}</p>}
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</label>
+              <input
+                {...register("password")}
+                type="password"
+                className={`w-full px-4 py-2.5 bg-background border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                  errors.password ? "border-destructive" : "border-input"
+                }`}
+              />
+              {errors.password && <p className="text-[11px] text-destructive font-medium">{errors.password.message}</p>}
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Confirm Password</label>
+              <input
+                {...register("confirmPassword")}
+                type="password"
+                className={`w-full px-4 py-2.5 bg-background border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary ${
+                  errors.confirmPassword ? "border-destructive" : "border-input"
+                }`}
+              />
+              {errors.confirmPassword && <p className="text-[11px] text-destructive font-medium">{errors.confirmPassword.message}</p>}
+            </div>
+
+            {/* Agreement Checkbox */}
+            <div className="flex items-start gap-2.5 pt-2">
+              <input
+                id="agreement"
+                type="checkbox"
+                {...register("agreement")}
+                className="mt-0.5 h-4 w-4 rounded border-input text-primary focus:ring-primary/20 cursor-pointer"
+              />
+              <label htmlFor="agreement" className="text-xs text-muted-foreground cursor-pointer select-none">
+                I agree to the Terms and Conditions of service.
+              </label>
+            </div>
+            {errors.agreement && <p className="text-[11px] text-destructive font-medium">{errors.agreement.message}</p>}
+
+            {/* Submit Button */}
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold text-sm shadow-md hover:opacity-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-4"
+            >
+              {isSubmitting ? "Creating account..." : "Create account"}
+            </motion.button>
           </form>
 
-          <div className="mt-8 text-center text-sm">
-            <span className="text-muted-foreground">Already have an account? </span>
-            <NextLink href="/login" className="font-medium hover:underline">
-              Login
-            </NextLink>
+          {/* Account Login link */}
+          <div className="mt-8 text-center border-t pt-6">
+            <p className="text-xs text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary font-bold hover:underline">
+                Login
+              </Link>
+            </p>
           </div>
-        </div>
+        </motion.div>
       </main>
 
-      <footer className="p-8 border-t text-center text-xs text-muted-foreground leading-relaxed">
-        © 2026 InnerCircle Investor Platform. All rights reserved.<br />Developed by P3L Developers, Matta.
+      <footer className="p-8 border-t text-center text-[10px] text-muted-foreground leading-relaxed">
+        &copy; 2026 InnerCircle. All rights reserved. Developed by P3L Developers, Matta.
       </footer>
     </div>
   );

@@ -34,14 +34,14 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <SystemSettingsProvider>
             {children}
           </SystemSettingsProvider>
-          <Toaster position="top-center" richColors theme="dark" />
+          <Toaster position="top-center" richColors theme="light" />
         </ThemeProvider>
       </body>
     </html>
