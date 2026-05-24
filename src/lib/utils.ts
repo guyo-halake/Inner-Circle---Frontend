@@ -8,13 +8,19 @@ export function formatKSh(amount: number) {
 }
 
 export function formatCompactKSh(amount: number) {
-  const formatted = new Intl.NumberFormat("en-KE", {
-    style: "currency",
-    currency: "KES",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(amount);
-  return formatted.replace(/KES|Ksh/g, "KSh");
+  if (amount >= 1e9) {
+    const val = amount / 1e9;
+    return `KSh ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}B`;
+  }
+  if (amount >= 1e6) {
+    const val = amount / 1e6;
+    return `KSh ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}M`;
+  }
+  if (amount >= 1e3) {
+    const val = amount / 1e3;
+    return `KSh ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}K`;
+  }
+  return `KSh ${amount.toFixed(2)}`;
 }
 
 export function formatRelativeTime(date: string | Date) {
