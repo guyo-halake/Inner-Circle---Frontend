@@ -5,6 +5,7 @@ import { PerformancePreview } from "@/components/performance-preview";
 import { ROICalculator } from "@/components/roi-calculator";
 import { HowItWorks } from "@/components/how-it-works";
 import { Testimonials } from "@/components/testimonials";
+import { ContactSection } from "@/components/contact-section";
 import { Footer } from "@/components/footer";
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
         <ROICalculator />
         <HowItWorks />
         <Testimonials />
+        <ContactSection />
       </main>
       <Footer />
     </div>
