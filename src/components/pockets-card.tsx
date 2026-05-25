@@ -18,30 +18,39 @@ export function PocketsCard() {
     return balance ? parseFloat(balance.toString()) : 0;
   };
 
+  const allocationBalance = getBalance("POCKET_ALLOCATION");
+  const dailyReturn = allocationBalance * 0.00166667;
+
   const pockets = [
     { 
-      name: "Pocket Hold", 
+      name: "Available Funds", 
       type: "POCKET_HOLD", 
-      description: "Uninvested Capital", 
+      description: "Balance ready to be invested", 
       icon: Wallet, 
-      color: "text-blue-500",
-      bg: "bg-blue-500/10"
+      color: "text-zinc-400",
+      bg: "bg-transparent border border-zinc-800",
+      badgeText: "Ready to invest",
+      badgeClass: "bg-transparent border-zinc-800 text-zinc-400"
     },
     { 
-      name: "The Allocation", 
+      name: "Invested Capital", 
       type: "POCKET_ALLOCATION", 
-      description: "Active Investment", 
+      description: "Capital active in markets", 
       icon: Landmark, 
-      color: "text-amber-500",
-      bg: "bg-amber-500/10"
+      color: "text-zinc-400",
+      bg: "bg-transparent border border-zinc-800",
+      badgeText: "Target: 30% yield per 6 months",
+      badgeClass: "bg-transparent border-zinc-800 text-zinc-400"
     },
     { 
-      name: "The Yield", 
+      name: "Yield Profit", 
       type: "POCKET_YIELD", 
-      description: "Profit Distribution", 
+      description: "Accumulated daily earnings", 
       icon: TrendingUp, 
       color: "text-emerald-500",
-      bg: "bg-emerald-500/10"
+      bg: "bg-transparent border border-emerald-900/30",
+      badgeText: `+${formatKSh(dailyReturn)} / Day (+0.17%)`,
+      badgeClass: "bg-transparent border-emerald-950/20 border-emerald-900/30 text-emerald-400"
     },
   ];
 
@@ -50,45 +59,49 @@ export function PocketsCard() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
       {pockets.map((pocket) => (
-        <div key={pocket.type} className="bg-card/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:bg-card/60 transition-all duration-300 before:absolute before:inset-0 before:p-[1px] before:bg-gradient-to-br before:from-white/20 before:to-transparent before:content-[''] before:rounded-2xl before:-z-10">
-          <div className="flex items-start justify-between mb-6">
-            <div className={`p-3 rounded-xl ${pocket.bg} ${pocket.color}`}>
-              <pocket.icon size={20} />
+        <div 
+          key={pocket.type} 
+          className="bg-transparent border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 hover:bg-zinc-950/20 transition-all duration-200"
+        >
+          <div className="flex items-start justify-between mb-5">
+            <div className={`p-2.5 rounded-xl border border-zinc-800/30 ${pocket.bg} ${pocket.color}`}>
+              <pocket.icon size={18} />
             </div>
             {pocket.type === "POCKET_HOLD" ? (
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="bg-primary text-primary-foreground px-3 py-1 rounded-lg text-[9px] uppercase font-black tracking-widest hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer"
+                className="bg-foreground text-background px-3 py-1.5 rounded-lg text-[9px] uppercase font-bold tracking-wider hover:opacity-90 transition-opacity flex items-center gap-1.5 cursor-pointer"
               >
-                 <Coins size={10} /> Stake Capital
+                 <Coins size={10} /> Invest Capital
               </button>
             ) : pocket.type === "POCKET_ALLOCATION" ? (
               <Link 
                 href="/portfolio" 
-                className="text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+                className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 cursor-pointer py-1"
               >
-                 Manage <ArrowRight size={10} />
+                 Details <ArrowRight size={9} />
               </Link>
             ) : (
               <Link 
                 href="/withdraw" 
-                className="text-[10px] uppercase font-black tracking-widest text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+                className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 cursor-pointer py-1"
               >
-                 Withdraw <ArrowRight size={10} />
+                 Withdraw <ArrowRight size={9} />
               </Link>
             )}
           </div>
           
           <div className="space-y-1">
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{pocket.name}</h4>
-            <div className="text-2xl font-black font-numbers tracking-tight">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{pocket.name}</h4>
+            <div className="text-2xl font-bold font-numbers tracking-tight text-foreground">
                <Counter to={getBalance(pocket.type)} format={(v) => formatKSh(v)} />
             </div>
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter italic">{pocket.description}</p>
-          </div>
-
-          <div className="absolute -bottom-2 -right-2 opacity-5 scale-150 rotate-12 group-hover:scale-[1.7] transition-transform">
-             <pocket.icon size={80} />
+            <p className="text-[10px] text-muted-foreground/50 mb-3">{pocket.description}</p>
+            
+            {/* Minimalist Stats Badge */}
+            <div className={`flex items-center gap-1.5 mt-4 border px-2.5 py-1 rounded-lg w-fit text-[9px] font-medium tracking-wide ${pocket.badgeClass}`}>
+              {pocket.badgeText}
+            </div>
           </div>
         </div>
       ))}
