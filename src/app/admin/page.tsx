@@ -18,6 +18,7 @@ import {
   Clock3,
   Copy,
   Database,
+  Edit2,
   FileText,
   FileUp,
   Inbox,
@@ -39,6 +40,10 @@ import {
   Wallet,
   Wrench,
   XCircle,
+  Lock,
+  Trash2,
+  Edit,
+  Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { io } from "socket.io-client";
@@ -66,7 +71,7 @@ ChartJS.register(
   Legend
 );
 
-type AdminTab = "overview" | "investors" | "team" | "funds" | "settings";
+type AdminTab = "overview" | "investors" | "team" | "funds" | "settings" | "server";
 
 type Summary = {
   totalAUM: number;
@@ -169,6 +174,7 @@ function AdminContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Core Admin Data
   const [summary, setSummary] = useState<Summary>({ totalAUM: 0, totalUsers: 0, monthlyProfit: 0 });
@@ -188,6 +194,13 @@ function AdminContent() {
     support_email: "p3lcodes@gmail.com",
     app_version: "1.1.0",
     primary_theme: "zinc",
+    company_name: "InnerCircle",
+    company_phone: "+254 114339025",
+    company_email: "innercirclehedgefund@gmail.com",
+    admin_email: "razakwako45@gmail.com",
+    social_instagram: "https://www.instagram.com/innercirclehf?igsh=MTBzejZkZjR2OGsxYw==",
+    social_x: "https://x.com/innercircle26?s=11",
+    social_facebook: "https://www.facebook.com/share/1HygY6aCbY/"
   });
 
   // Forms
@@ -222,11 +235,27 @@ function AdminContent() {
     role: "Investor"
   });
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isShowUsersOpen, setIsShowUsersOpen] = useState(false);
+
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<any>(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" });
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState<any>(null);
+
   const [selectedPoolId, setSelectedPoolId] = useState<string>("");
   const [historySearch, setHistorySearch] = useState("");
   const [historyFilter, setHistoryFilter] = useState<"All" | "Deposit" | "Withdrawal">("All");
   const [simPoolId, setSimPoolId] = useState("");
   const [simProfit, setSimProfit] = useState("");
+
+  // SRE Command Center States
+  const [sreLogs, setSreLogs] = useState<string[]>([]);
+  const [radarData, setRadarData] = useState<any>(null);
+  const [coreData, setCoreData] = useState<any>(null);
+  const [infraData, setInfraData] = useState<any>(null);
+  const [terminalTab, setTerminalTab] = useState<"AWS" | "RAILWAY" | "VERCEL" | "SECURITY">("AWS");
+  const [liveTraffic, setLiveTraffic] = useState(0);
+  const [transactionsFrozen, setTransactionsFrozen] = useState(false);
 
   // Audio / Real-time alerts
   const [prevPendingCount, setPrevPendingCount] = useState<number | null>(null);
@@ -244,6 +273,7 @@ function AdminContent() {
         allTxData,
         settingsData,
         teamData,
+        usersData,
       ] = await Promise.all([
         fetchAuthed<Summary>(`${API_URL}/api/admin/summary`, token),
         fetchAuthed<Investor[]>(`${API_URL}/api/admin/investors`, token),
@@ -253,6 +283,7 @@ function AdminContent() {
         fetchAuthed<Transaction[]>(`${API_URL}/api/admin/transactions/all`, token),
         fetchAuthed<Record<string, string>>(`${API_URL}/api/admin/settings`, token),
         fetchAuthed<TeamMember[]>(`${API_URL}/api/admin/team`, token),
+        fetchAuthed<any[]>(`${API_URL}/api/admin/users`, token),
       ]);
 
       setSummary(summaryData);
@@ -261,8 +292,9 @@ function AdminContent() {
       setPools(poolsData);
       setTradeProofs(proofsData);
       setAllTransactions(allTxData);
-      setSettingsState(settingsData as any);
+      setSettingsState(prev => ({ ...prev, ...(settingsData as any) }));
       setTeamMembers(teamData);
+      setAllUsers(usersData);
     } catch (err: any) {
       console.error("Refresh error:", err);
     }
@@ -327,6 +359,53 @@ function AdminContent() {
     }
     setPrevPendingCount(pendingTransactions.length);
   }, [pendingTransactions.length]);
+
+  // Python SRE WebSockets & Omni-Dashboard Polling
+  useEffect(() => {
+    if (!token) return;
+
+    const ws = new WebSocket("ws://127.0.0.1:8000/ws/logs");
+    ws.onmessage = (event) => {
+      setSreLogs((prev) => [...prev, event.data].slice(-200));
+    };
+
+    const interval = setInterval(async () => {
+      try {
+        const sys = await fetchAuthed<any>(`${API_URL}/api/admin/metrics`, token);
+        setLiveTraffic(sys.activeConnections);
+        setTransactionsFrozen(sys.transactionsFrozen);
+
+        const [rData, cData, iData] = await Promise.all([
+          fetch("http://127.0.0.1:8000/godmode/radar").then(res => res.ok ? res.json() : null).catch(()=>null),
+          fetch("http://127.0.0.1:8000/godmode/core").then(res => res.ok ? res.json() : null).catch(()=>null),
+          fetch("http://127.0.0.1:8000/godmode/infra").then(res => res.ok ? res.json() : null).catch(()=>null)
+        ]);
+
+        if (rData) setRadarData(rData);
+        if (cData) setCoreData(cData);
+        if (iData) setInfraData(iData);
+      } catch { }
+    }, 2000);
+
+    return () => {
+      ws.close();
+      clearInterval(interval);
+    };
+  }, [token]);
+
+  const toggleSystemFreeze = async () => {
+    try {
+      if (!confirm(`Are you sure you want to ${transactionsFrozen ? 'UNFREEZE' : 'FREEZE'} all system transactions?`)) return;
+      await fetchAuthed(`${API_URL}/api/admin/freeze-system`, token, {
+        method: "POST",
+        body: JSON.stringify({ freeze: !transactionsFrozen })
+      });
+      toast.success(`System transactions ${!transactionsFrozen ? 'frozen' : 'unfrozen'}`);
+      setTransactionsFrozen(!transactionsFrozen);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to toggle freeze switch");
+    }
+  };
 
   // Computations
   const pendingAmount = useMemo(
@@ -518,7 +597,7 @@ function AdminContent() {
   const onAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    
+
     if (addUserForm.password !== addUserForm.confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -549,6 +628,72 @@ function AdminContent() {
       await refreshAdminData();
     } catch (err: any) {
       toast.error(err.message || "Failed to create user");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onDeleteUser = async (userId: string, userName: string) => {
+    if (!token) return;
+    if (!confirm(`Are you sure you want to permanently delete user ${userName}? This will drop all their wallets, investments, and history.`)) return;
+
+    try {
+      setSaving(true);
+      await fetchAuthed(`${API_URL}/api/admin/users/${userId}`, token, { method: "DELETE" });
+      toast.success(`User ${userName} deleted successfully.`);
+      await refreshAdminData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete user");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !selectedUserForPassword) return;
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await fetchAuthed(`${API_URL}/api/admin/users/${selectedUserForPassword.id}/password`, token, {
+        method: "PUT",
+        body: JSON.stringify({ newPassword: passwordForm.newPassword })
+      });
+      toast.success(`Password for ${selectedUserForPassword.fullName} changed successfully.`);
+      setSelectedUserForPassword(null);
+      setPasswordForm({ newPassword: "", confirmPassword: "" });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to change password");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !selectedUserForEdit) return;
+
+    try {
+      setSaving(true);
+      await fetchAuthed(`${API_URL}/api/admin/users/${selectedUserForEdit.id}`, token, {
+        method: "PUT",
+        body: JSON.stringify({
+          fullName: selectedUserForEdit.fullName,
+          email: selectedUserForEdit.email,
+          phone: selectedUserForEdit.phone,
+          role: selectedUserForEdit.role
+        })
+      });
+      toast.success(`User ${selectedUserForEdit.fullName} updated successfully.`);
+      setSelectedUserForEdit(null);
+      await refreshAdminData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update user");
     } finally {
       setSaving(false);
     }
@@ -604,10 +749,10 @@ function AdminContent() {
   // Derived stats for Funds tab
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const lastWeek = new Date();
   lastWeek.setDate(lastWeek.getDate() - 7);
-  
+
   const lastMonth = new Date();
   lastMonth.setMonth(lastMonth.getMonth() - 1);
 
@@ -742,6 +887,7 @@ function AdminContent() {
               { key: "team", label: "MyTeam", icon: Shield },
               { key: "funds", label: "Deposits & Withdrawals", icon: Wallet, badge: pendingTransactions.length },
               { key: "settings", label: "Settings", icon: Wrench },
+              { key: "server", label: "Admin/Server", icon: Terminal },
             ].map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.key;
@@ -749,11 +895,10 @@ function AdminContent() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer transition-all relative font-sans ${
-                    active
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer transition-all relative font-sans ${active
                       ? "bg-foreground text-background shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-black/5"
-                  }`}
+                    }`}
                 >
                   <Icon size={14} />
                   <span>{tab.label}</span>
@@ -1007,10 +1152,10 @@ function AdminContent() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
+
                         {/* Left Column: Profile, Wallet Cards & Contact Form */}
                         <div className="lg:col-span-1 space-y-6">
-                          
+
                           {/* Profile Card */}
                           <section className="bg-card border border-border rounded-2xl p-6 flex flex-col items-center text-center">
                             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-sora font-semibold text-primary mb-4">
@@ -1018,7 +1163,7 @@ function AdminContent() {
                             </div>
                             <h2 className="text-lg font-sora font-semibold text-foreground mb-1">{selectedInvestorView.fullName}</h2>
                             <p className="text-xs text-muted-foreground font-mono mb-4">{selectedInvestorView.email}</p>
-                            
+
                             <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border ${Number(selectedInvestorView.isVerified) === 1 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'}`}>
                               {Number(selectedInvestorView.isVerified) === 1 ? 'Verified' : 'Unverified'}
                             </span>
@@ -1120,7 +1265,7 @@ function AdminContent() {
 
                         {/* Right Column: Growth Graph & Transaction History */}
                         <div className="lg:col-span-2 space-y-6">
-                          
+
                           {/* Portfolio Growth Graph (Chart.js) */}
                           <section className="bg-card border border-border rounded-2xl p-6">
                             <div className="flex items-center justify-between mb-4">
@@ -1135,12 +1280,12 @@ function AdminContent() {
                                 </p>
                               </div>
                             </div>
-                            
+
                             <div className="h-64 relative w-full">
                               {investorDetail?.growthHistory && investorDetail.growthHistory.length > 0 ? (
                                 <Line
                                   data={{
-                                    labels: investorDetail.growthHistory.map((h: any) => 
+                                    labels: investorDetail.growthHistory.map((h: any) =>
                                       new Date(h.date).toLocaleDateString("en-KE", { day: "numeric", month: "short" })
                                     ),
                                     datasets: [
@@ -1205,7 +1350,7 @@ function AdminContent() {
                           {/* Financial History */}
                           <section className="bg-card border border-border rounded-2xl p-6">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-6">Financial History</h3>
-                            
+
                             <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
                               {!investorDetail?.transactions || investorDetail.transactions.length === 0 ? (
                                 <div className="p-8 text-center text-xs text-muted-foreground/60 border border-dashed border-border/60 rounded-xl">
@@ -1433,7 +1578,7 @@ function AdminContent() {
             {/* TAB: DEPOSITS & WITHDRAWALS */}
             {activeTab === "funds" && (
               <div className="space-y-6">
-                
+
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Deposits Stats */}
@@ -1487,7 +1632,7 @@ function AdminContent() {
 
                 {/* Pending Actions lists */}
                 <section className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px]">
-                  
+
                   {/* Left Column: List of Pending */}
                   <div className="w-full md:w-1/3 border-r border-border/40 flex flex-col">
                     <div className="p-5 border-b border-border/40 flex items-center justify-between bg-muted/10">
@@ -1560,7 +1705,7 @@ function AdminContent() {
 
                         <div className="p-6 flex-1 overflow-y-auto">
                           <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Proof & Details</h4>
-                          
+
                           {(() => {
                             const details = parseDetails(selectedPendingTx.methodDetails);
                             if (!details) {
@@ -1670,8 +1815,8 @@ function AdminContent() {
                             key={filterOpt}
                             onClick={() => setHistoryFilter(filterOpt)}
                             className={`px-3 py-1.5 rounded-lg cursor-pointer ${historyFilter === filterOpt
-                                ? "bg-card text-foreground shadow-sm"
-                                : "text-muted-foreground hover:text-foreground"
+                              ? "bg-card text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
                               }`}
                           >
                             {filterOpt}
@@ -1711,10 +1856,10 @@ function AdminContent() {
                               </td>
                               <td className="py-3.5 px-4">
                                 <span className={`inline-block font-black tracking-tight text-[10px] uppercase ${tx.type === "Deposit"
-                                    ? "text-emerald-500"
-                                    : tx.type === "Withdrawal"
-                                      ? "text-orange-500"
-                                      : "text-blue-500"
+                                  ? "text-emerald-500"
+                                  : tx.type === "Withdrawal"
+                                    ? "text-orange-500"
+                                    : "text-blue-500"
                                   }`}>
                                   {tx.type}
                                 </span>
@@ -1724,10 +1869,10 @@ function AdminContent() {
                               </td>
                               <td className="py-3.5 px-4">
                                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase border ${tx.status === "Approved"
-                                    ? "bg-emerald-500/5 text-emerald-500 border-emerald-500/10"
-                                    : tx.status === "Pending"
-                                      ? "bg-amber-500/5 text-amber-500 border-amber-500/10"
-                                      : "bg-destructive/5 text-destructive border-destructive/10"
+                                  ? "bg-emerald-500/5 text-emerald-500 border-emerald-500/10"
+                                  : tx.status === "Pending"
+                                    ? "bg-amber-500/5 text-amber-500 border-amber-500/10"
+                                    : "bg-destructive/5 text-destructive border-destructive/10"
                                   }`}>
                                   {tx.status}
                                 </span>
@@ -1824,8 +1969,8 @@ function AdminContent() {
                             key={t.key}
                             onClick={() => updateDeveloperSetting("primary_theme", t.key)}
                             className={`flex flex-col items-center justify-center p-3 rounded-xl border text-[10px] font-black tracking-tight cursor-pointer transition-all ${active
-                                ? "bg-primary/5 border-primary text-foreground shadow-sm"
-                                : "bg-card border-border hover:bg-muted/30 text-muted-foreground"
+                              ? "bg-primary/5 border-primary text-foreground shadow-sm"
+                              : "bg-card border-border hover:bg-muted/30 text-muted-foreground"
                               }`}
                           >
                             <span className={`w-4 h-4 rounded-full ${t.color} mb-1.5 shrink-0`} />
@@ -1846,12 +1991,20 @@ function AdminContent() {
                         </h2>
                         <p className="text-[10px] text-muted-foreground">Create a new user account with a specific role.</p>
                       </div>
-                      <button
-                        onClick={() => setIsAddUserOpen(!isAddUserOpen)}
-                        className="rounded-full bg-foreground text-background font-bold px-4 py-1.5 text-[11px] hover:opacity-90 transition-all flex items-center gap-1 cursor-pointer"
-                      >
-                        {isAddUserOpen ? "Close Form" : "Create User"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsShowUsersOpen(!isShowUsersOpen)}
+                          className="rounded-full border border-border text-foreground font-bold px-4 py-1.5 text-[11px] hover:bg-muted/50 transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          {isShowUsersOpen ? "Hide Users" : "Show Logged in Users"}
+                        </button>
+                        <button
+                          onClick={() => setIsAddUserOpen(!isAddUserOpen)}
+                          className="rounded-full bg-foreground text-background font-bold px-4 py-1.5 text-[11px] hover:opacity-90 transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          {isAddUserOpen ? "Close Form" : "Create User"}
+                        </button>
+                      </div>
                     </div>
 
                     {isAddUserOpen && (
@@ -1946,6 +2099,68 @@ function AdminContent() {
                         </button>
                       </form>
                     )}
+
+                    {isShowUsersOpen && (
+                      <div className="pt-4 border-t border-border/40 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="overflow-x-auto rounded-xl border border-border bg-background">
+                          <table className="w-full text-left text-[11px]">
+                            <thead className="bg-muted/50 text-muted-foreground uppercase text-[9px] font-black tracking-wider">
+                              <tr>
+                                <th className="px-4 py-3 border-b border-border">Full Name</th>
+                                <th className="px-4 py-3 border-b border-border">Email</th>
+                                <th className="px-4 py-3 border-b border-border">Phone</th>
+                                <th className="px-4 py-3 border-b border-border">Role</th>
+                                <th className="px-4 py-3 border-b border-border text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {allUsers.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground font-medium">No users found</td>
+                                </tr>
+                              ) : (
+                                allUsers.map((user) => (
+                                  <tr key={user.id} className="hover:bg-muted/20 transition-colors">
+                                    <td className="px-4 py-3 font-bold text-foreground">{user.fullName}</td>
+                                    <td className="px-4 py-3 font-mono text-muted-foreground">{user.email}</td>
+                                    <td className="px-4 py-3 font-mono text-muted-foreground">{user.phone || "-"}</td>
+                                    <td className="px-4 py-3">
+                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${user.role === 'Admin' || user.role === 'Developer' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                                        }`}>
+                                        {user.role}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 flex items-center justify-end gap-1.5">
+                                      <button
+                                        onClick={() => setSelectedUserForEdit(user)}
+                                        className="p-1.5 rounded-md hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors group relative"
+                                      >
+                                        <Edit size={14} />
+                                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-foreground text-background text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity z-50">Update User</span>
+                                      </button>
+                                      <button
+                                        onClick={() => setSelectedUserForPassword(user)}
+                                        className="p-1.5 rounded-md hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors group relative"
+                                      >
+                                        <Lock size={14} />
+                                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-foreground text-background text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity z-50">Change Password</span>
+                                      </button>
+                                      <button
+                                        onClick={() => onDeleteUser(user.id, user.fullName)}
+                                        className="p-1.5 rounded-md hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors group relative"
+                                      >
+                                        <Trash2 size={14} />
+                                        <span className="absolute -top-7 right-0 bg-red-500 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity z-50">Delete User</span>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </section>
                 </div>
 
@@ -1996,86 +2211,297 @@ function AdminContent() {
                     </div>
                   </section>
 
-                  {/* Pool Creation & Management */}
+                  {/* Company Profile Settings */}
                   <section className="bg-card border border-border rounded-2xl p-5 space-y-4">
-                    <div>
-                      <h2 className="text-sm font-black tracking-tight">Investment Pools</h2>
-                      <p className="text-[10px] text-muted-foreground">Add new investment options/pools.</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-sm font-black tracking-tight">Company Profile</h2>
+                        <p className="text-[10px] text-muted-foreground">Manage your company contact details and socials.</p>
+                      </div>
+                      <button
+                        onClick={() => setIsEditingProfile(!isEditingProfile)}
+                        className={`p-2 rounded-xl transition-colors ${isEditingProfile ? 'bg-primary/10 text-primary' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}
+                        title={isEditingProfile ? "Done Editing" : "Edit Profile"}
+                      >
+                        {isEditingProfile ? <Check size={14} /> : <Edit2 size={14} />}
+                      </button>
                     </div>
 
-                    <form onSubmit={onCreatePool} className="space-y-3 text-xs font-semibold">
+                    <div className="space-y-3.5 text-xs font-semibold">
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Pool Name</label>
+                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Company Name</label>
                           <input
                             type="text"
-                            required
-                            value={poolForm.name}
-                            onChange={(e) => setPoolForm(prev => ({ ...prev, name: e.target.value }))}
-                            className="w-full bg-muted/20 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none"
+                            disabled={!isEditingProfile}
+                            value={settingsState.company_name || ""}
+                            onChange={(e) => setSettingsState(prev => ({ ...prev, company_name: e.target.value }))}
+                            onBlur={(e) => updateDeveloperSetting("company_name", e.target.value)}
+                            className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Category</label>
-                          <select
-                            value={poolForm.category}
-                            onChange={(e) => setPoolForm(prev => ({ ...prev, category: e.target.value as any }))}
-                            className="w-full bg-muted/20 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none"
-                          >
-                            <option value="Forex">Forex</option>
-                            <option value="Crypto">Crypto</option>
-                            <option value="MMF">MMF</option>
-                            <option value="Stocks">Stocks</option>
-                          </select>
+                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Phone Number</label>
+                          <input
+                            type="text"
+                            disabled={!isEditingProfile}
+                            value={settingsState.company_phone || ""}
+                            onChange={(e) => setSettingsState(prev => ({ ...prev, company_phone: e.target.value }))}
+                            onBlur={(e) => updateDeveloperSetting("company_phone", e.target.value)}
+                            className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-numbers text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
+                          />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Target Return (%)</label>
+                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Company Email</label>
                           <input
-                            type="number"
-                            required
-                            value={poolForm.initial_yield}
-                            onChange={(e) => setPoolForm(prev => ({ ...prev, initial_yield: e.target.value }))}
-                            className="w-full bg-muted/20 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none"
+                            type="email"
+                            disabled={!isEditingProfile}
+                            value={settingsState.company_email || ""}
+                            onChange={(e) => setSettingsState(prev => ({ ...prev, company_email: e.target.value }))}
+                            onBlur={(e) => updateDeveloperSetting("company_email", e.target.value)}
+                            className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-mono text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Risk Level</label>
-                          <select
-                            value={poolForm.risk_level}
-                            onChange={(e) => setPoolForm(prev => ({ ...prev, risk_level: e.target.value }))}
-                            className="w-full bg-muted/20 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none"
-                          >
-                            <option value="Low">Low</option>
-                            <option value="Moderate">Moderate</option>
-                            <option value="High">High</option>
-                          </select>
+                          <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Admin Alert Email</label>
+                          <input
+                            type="email"
+                            disabled={!isEditingProfile}
+                            value={settingsState.admin_email || ""}
+                            onChange={(e) => setSettingsState(prev => ({ ...prev, admin_email: e.target.value }))}
+                            onBlur={(e) => updateDeveloperSetting("admin_email", e.target.value)}
+                            className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-mono text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
+                          />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Description</label>
-                        <textarea
-                          value={poolForm.description}
-                          onChange={(e) => setPoolForm(prev => ({ ...prev, description: e.target.value }))}
-                          rows={2}
-                          className="w-full bg-muted/20 border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none"
+                        <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Instagram Link</label>
+                        <input
+                          type="url"
+                          disabled={!isEditingProfile}
+                          value={settingsState.social_instagram || ""}
+                          onChange={(e) => setSettingsState(prev => ({ ...prev, social_instagram: e.target.value }))}
+                          onBlur={(e) => updateDeveloperSetting("social_instagram", e.target.value)}
+                          className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-mono text-[10px] text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed truncate"
                         />
                       </div>
 
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="w-full rounded-xl bg-primary text-primary-foreground font-black py-2.5 hover:opacity-90 disabled:opacity-60 cursor-pointer"
-                      >
-                        Create New Pool
-                      </button>
-                    </form>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">X (Twitter) Link</label>
+                        <input
+                          type="url"
+                          disabled={!isEditingProfile}
+                          value={settingsState.social_x || ""}
+                          onChange={(e) => setSettingsState(prev => ({ ...prev, social_x: e.target.value }))}
+                          onBlur={(e) => updateDeveloperSetting("social_x", e.target.value)}
+                          className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-mono text-[10px] text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed truncate"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Facebook Link</label>
+                        <input
+                          type="url"
+                          disabled={!isEditingProfile}
+                          value={settingsState.social_facebook || ""}
+                          onChange={(e) => setSettingsState(prev => ({ ...prev, social_facebook: e.target.value }))}
+                          onBlur={(e) => updateDeveloperSetting("social_facebook", e.target.value)}
+                          className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-mono text-[10px] text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed truncate"
+                        />
+                      </div>
+                    </div>
                   </section>
                 </div>
+              </div>
+            )}
 
+            {/* TAB 6: SERVER OVERVIEW */}
+            {activeTab === "server" && (
+              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                <header className="flex items-center justify-between pb-2 border-b border-border/50">
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-3">
+                      <Activity size={28} className="text-primary" />
+                      System Overview
+                    </h2>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium">Administration and Infrastructure Dashboard</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-end">
+                      <div className="text-[10px] text-muted-foreground font-bold tracking-widest uppercase mb-1">Status</div>
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                        <span className="text-xs font-bold text-emerald-600">Online</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={toggleSystemFreeze}
+                      className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+                        transactionsFrozen 
+                          ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100" 
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Shield size={14} />
+                      {transactionsFrozen ? "Resume Operations" : "Pause Operations"}
+                    </button>
+                  </div>
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                  
+                  {/* CARD 1: SYSTEM LOAD */}
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col gap-6">
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                        <Activity size={14} className="text-indigo-500" /> System Load
+                      </h3>
+                    </div>
+
+                    <div className="space-y-4 flex-1">
+                      <div className="h-full min-h-[220px] w-full relative">
+                        <div className="absolute inset-0 flex items-center justify-center text-[10px] text-gray-400 font-bold uppercase tracking-widest z-0">Load Metrics</div>
+                        <Line
+                          data={{
+                            labels: (radarData?.touches || [50, 52, 49, 58, 62, 55, 59, 65, 70, 72, 68, 64, 60, 56, 54, 52, 50, 48, 55, 58]).map((_: any, i: number) => i),
+                            datasets: [{
+                              label: "Load Intensity",
+                              data: radarData?.touches || [50, 52, 49, 58, 62, 55, 59, 65, 70, 72, 68, 64, 60, 56, 54, 52, 50, 48, 55, 58],
+                              borderColor: "#6366f1",
+                              backgroundColor: "rgba(99, 102, 241, 0.1)",
+                              tension: 0.4, fill: true, borderWidth: 2, pointRadius: 0
+                            }]
+                          }}
+                          options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false, min: 0 } }, animation: { duration: 0 } }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD 2: FINANCIAL OPERATIONS */}
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col gap-6">
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                        <Wallet size={14} className="text-emerald-500" /> Financial Operations
+                      </h3>
+                    </div>
+
+                    <div className="space-y-6 flex-1">
+                      <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+                        <div>
+                          <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">Conversion Rate</div>
+                          <div className="text-2xl font-black text-emerald-700 tracking-tight">{coreData?.funnel_velocity || 0}<span className="text-xs text-emerald-600/60 font-medium ml-1">avg</span></div>
+                        </div>
+                        <div className="w-10 h-10 rounded-full border border-emerald-200 flex items-center justify-center bg-white shadow-sm">
+                          <Activity size={16} className="text-emerald-600" />
+                        </div>
+                      </div>
+
+                      <div className="h-24 w-full relative">
+                        {coreData?.money_stream ? (
+                          <Line
+                            data={{
+                              labels: coreData.money_stream.map((_: any, i: number) => i),
+                              datasets: [{
+                                label: "Transactions",
+                                data: coreData.money_stream,
+                                borderColor: "#10b981",
+                                backgroundColor: "rgba(16, 185, 129, 0.1)",
+                                tension: 0.1, fill: true, borderWidth: 2, pointRadius: 0, stepped: true
+                              }]
+                            }}
+                            options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false, min: 0 } }, animation: { duration: 0 } }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-medium">Loading data...</div>
+                        )}
+                      </div>
+
+                      <div className="bg-red-50 border border-red-100 p-4 rounded-xl h-32 flex flex-col">
+                        <div className="text-[10px] text-red-600 font-bold uppercase tracking-wider mb-2 border-b border-red-100 pb-2 flex items-center gap-2"><XCircle size={12} /> System Logs</div>
+                        <div className="flex-1 overflow-hidden space-y-1.5 text-xs text-red-700 font-medium">
+                          {coreData?.error_feed?.map((err: string, idx: number) => (
+                            <div key={idx} className="truncate">• {err}</div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD 3: INFRASTRUCTURE STATUS */}
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col gap-6">
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                        <Database size={14} className="text-blue-500" /> Infrastructure Status
+                      </h3>
+                    </div>
+
+                    <div className="space-y-4 flex-1">
+                      {/* Server Details */}
+                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-1">Region</div>
+                          <div className="text-xs font-semibold text-gray-800 truncate">{infraData?.location || "Marsabit, KE"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-1">Network</div>
+                          <div className="text-xs font-semibold text-gray-800 truncate">{infraData?.isp || "Safaricom 4G LTE"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-1">IP Address</div>
+                          <div className="text-xs font-semibold text-gray-800 truncate">{infraData?.ip_address || "197.232.X.X"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-1">Latency</div>
+                          <div className="text-xs font-semibold text-gray-800 flex items-center gap-1 font-numbers">
+                            {infraData?.latency_ms || 0}ms
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hardware Vitals */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-gray-50 border border-gray-100 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
+                          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">CPU</div>
+                          <div className={`text-sm font-bold font-numbers ${infraData?.vitals?.cpu > 80 ? 'text-red-600' : 'text-gray-900'}`}>{infraData?.vitals?.cpu || 0}%</div>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-100 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
+                          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">RAM</div>
+                          <div className="text-sm font-bold text-gray-900 font-numbers">{infraData?.vitals?.ram || 0}%</div>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-100 p-3 rounded-xl flex flex-col items-center justify-center gap-1">
+                          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Disk</div>
+                          <div className="text-sm font-bold text-gray-900 font-numbers">{infraData?.vitals?.disk || 0}%</div>
+                        </div>
+                      </div>
+
+                      {/* Server Logs */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl flex flex-col overflow-hidden h-32 relative">
+                        <div className="flex border-b border-gray-200 bg-white">
+                          {['AWS', 'RAILWAY', 'VERCEL'].map(tab => (
+                            <button 
+                              key={tab}
+                              onClick={() => setTerminalTab(tab as any)}
+                              className={`flex-1 py-2 text-[10px] font-bold tracking-wider transition-all ${terminalTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
+                            >
+                              {tab}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex-1 p-3 text-xs font-mono text-gray-600 overflow-y-auto">
+                          {infraData?.terminal_logs?.[terminalTab.toLowerCase()]?.map((log: string, idx: number) => (
+                            <div key={idx} className="truncate mb-1 text-gray-500">{log}</div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             )}
 
@@ -2084,6 +2510,99 @@ function AdminContent() {
 
 
       </div>
+
+      {/* Update User Modal */}
+      {selectedUserForEdit && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-card border border-border rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-black tracking-tight mb-1 text-foreground">Update User</h2>
+            <p className="text-xs text-muted-foreground mb-5">Edit details for {selectedUserForEdit.fullName}</p>
+
+            <form onSubmit={onUpdateUser} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Full Name</label>
+                <input
+                  type="text" required
+                  value={selectedUserForEdit.fullName}
+                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, fullName: e.target.value }))}
+                  className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Email</label>
+                <input
+                  type="email" required
+                  value={selectedUserForEdit.email}
+                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Phone</label>
+                <input
+                  type="text"
+                  value={selectedUserForEdit.phone || ""}
+                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Role</label>
+                <select
+                  value={selectedUserForEdit.role}
+                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none"
+                >
+                  {userRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setSelectedUserForEdit(null)} className="flex-1 bg-muted/50 text-foreground py-2.5 rounded-xl text-xs font-bold hover:bg-muted transition-colors">Cancel</button>
+                <button type="submit" disabled={saving} className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-xs font-black hover:opacity-90 transition-opacity flex justify-center items-center gap-2 disabled:opacity-50">
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {selectedUserForPassword && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-card border border-border rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-black tracking-tight mb-1 text-foreground">Change Password</h2>
+            <p className="text-xs text-muted-foreground mb-5">Force a new password for {selectedUserForPassword.fullName}</p>
+
+            <form onSubmit={onChangePassword} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">New Password</label>
+                <input
+                  type="password" required minLength={6}
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Confirm Password</label>
+                <input
+                  type="password" required minLength={6}
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setSelectedUserForPassword(null)} className="flex-1 bg-muted/50 text-foreground py-2.5 rounded-xl text-xs font-bold hover:bg-muted transition-colors">Cancel</button>
+                <button type="submit" disabled={saving} className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-xs font-black hover:opacity-90 transition-opacity flex justify-center items-center gap-2 disabled:opacity-50">
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />} Set Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
