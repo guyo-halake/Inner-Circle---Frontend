@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 
 import { Toaster } from "sonner";
 import { SystemSettingsProvider } from "@/components/system-settings-provider";
+import { PostHogProvider } from "@/components/posthog-provider";
 
 export default function RootLayout({
   children,
@@ -38,9 +39,11 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <SystemSettingsProvider>
-            {children}
-          </SystemSettingsProvider>
+          <PostHogProvider>
+            <SystemSettingsProvider>
+              {children}
+            </SystemSettingsProvider>
+          </PostHogProvider>
           <Toaster position="top-center" richColors theme="light" />
         </ThemeProvider>
       </body>

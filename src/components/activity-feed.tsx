@@ -10,20 +10,20 @@ export function ActivityFeed() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPeers = async () => {
+    const fetchTransactions = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/portfolio/peers`, {
+        const res = await fetch(`${API_URL}/api/payments/transactions`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         if (res.ok) setActivities(await res.json());
       } catch (err) {
-        console.error("Peer sync failed");
+        console.error("Transactions sync failed");
       } finally {
         setLoading(false);
       }
     };
-    fetchPeers();
-    const interval = setInterval(fetchPeers, 30000); // Sync every 30s
+    fetchTransactions();
+    const interval = setInterval(fetchTransactions, 30000); // Sync every 30s
     return () => clearInterval(interval);
   }, []);
 
@@ -53,7 +53,9 @@ export function ActivityFeed() {
       ) : (
         <div className="space-y-6">
           {activities.map((activity, index) => {
-            const Icon = getIcon(activity.action);
+            const Icon = getIcon(activity.type);
+            const isApproved = activity.status === 'Approved';
+            const isPending = activity.status === 'Pending';
             return (
               <div key={index} className="flex items-center gap-4 group transition-all">
                 <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-muted/40 border border-white/5 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all">
@@ -61,12 +63,14 @@ export function ActivityFeed() {
                 </div>
                 <div className="flex-grow flex justify-between items-center">
                   <div>
-                    <p className="text-[11px] font-black uppercase tracking-tight text-foreground group-hover:text-primary transition-colors">{activity.name}</p>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">{activity.action}</p>
+                    <p className="text-[11px] font-black uppercase tracking-tight text-foreground group-hover:text-primary transition-colors">{activity.type}</p>
+                    <p className={`text-[9px] font-bold uppercase tracking-widest italic ${isApproved ? 'text-emerald-500/80' : isPending ? 'text-amber-500/80' : 'text-red-500/80'}`}>
+                      {activity.status}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] font-bold font-mono tracking-tighter">{formatKSh(Number(activity.amount))}</p>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/20 italic">{formatRelativeTime(activity.date)}</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 italic">{formatRelativeTime(activity.createdAt)}</p>
                   </div>
                 </div>
               </div>
@@ -74,7 +78,7 @@ export function ActivityFeed() {
           })}
           {activities.length === 0 && (
             <div className="py-12 text-center opacity-20 italic uppercase tracking-[0.2em] text-[9px]">
-               Waiting for network activity...
+               No recent activity...
             </div>
           )}
         </div>

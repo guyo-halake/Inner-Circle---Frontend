@@ -12,32 +12,32 @@ import {
 const steps = [
   {
     number: "01",
-    title: "Deposit funds",
-    description: "Initiate your capital allocation securely via bank transfer, M-Pesa, or card.",
+    title: "Capital Allocation",
+    description: "Initiate your private allocation securely via bank transfer, M-Pesa, or card.",
     icon: ArrowRightLeft,
   },
   {
     number: "02",
-    title: "Wait for approval",
-    description: "Our administrative desk reviews and verifies the transaction for regulatory compliance.",
+    title: "Desk Clearance",
+    description: "Our administrative desk reviews and clears the allocation for compliance and logging.",
     icon: Clock,
   },
   {
     number: "03",
-    title: "Managed by experts",
-    description: "Capital is allocated across Stocks, Forex, and Money Market Funds (MMF) using proven, low-risk models.",
+    title: "Active Management",
+    description: "Capital is deployed across equities, foreign exchange, and money market funds using systematic risk controls.",
     icon: ShieldCheck,
   },
   {
     number: "04",
-    title: "Track your money",
-    description: "Monitor your wallet balances, daily performance metrics, and yields directly from your dashboard.",
+    title: "Performance Tracking",
+    description: "Monitor pool growth, accrued interest, and live yield metrics directly from your secure dashboard.",
     icon: LineChart,
   },
   {
     number: "05",
-    title: "Withdraw",
-    description: "Request capital redemptions or yield payouts with instant-liquidation processing.",
+    title: "Capital Redemption",
+    description: "Request capital redemptions or yield payouts with streamlined liquidation processing.",
     icon: DollarSign,
   },
 ];
