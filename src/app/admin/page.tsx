@@ -376,9 +376,9 @@ function AdminContent() {
         setTransactionsFrozen(sys.transactionsFrozen);
 
         const [rData, cData, iData] = await Promise.all([
-          fetch("http://127.0.0.1:8000/godmode/radar").then(res => res.ok ? res.json() : null).catch(()=>null),
-          fetch("http://127.0.0.1:8000/godmode/core").then(res => res.ok ? res.json() : null).catch(()=>null),
-          fetch("http://127.0.0.1:8000/godmode/infra").then(res => res.ok ? res.json() : null).catch(()=>null)
+          fetch("http://127.0.0.1:8000/godmode/radar").then(res => res.ok ? res.json() : null).catch(() => null),
+          fetch("http://127.0.0.1:8000/godmode/core").then(res => res.ok ? res.json() : null).catch(() => null),
+          fetch("http://127.0.0.1:8000/godmode/infra").then(res => res.ok ? res.json() : null).catch(() => null)
         ]);
 
         if (rData) setRadarData(rData);
@@ -896,8 +896,8 @@ function AdminContent() {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium cursor-pointer transition-all relative font-sans ${active
-                      ? "bg-foreground text-background shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-black/5"
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-black/5"
                     }`}
                 >
                   <Icon size={14} />
@@ -2340,11 +2340,10 @@ function AdminContent() {
                     </div>
                     <button
                       onClick={toggleSystemFreeze}
-                      className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
-                        transactionsFrozen 
-                          ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100" 
+                      className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${transactionsFrozen
+                          ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
                           : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                      }`}
+                        }`}
                     >
                       <Shield size={14} />
                       {transactionsFrozen ? "Resume Operations" : "Pause Operations"}
@@ -2353,7 +2352,7 @@ function AdminContent() {
                 </header>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-                  
+
                   {/* CARD 1: SYSTEM LOAD */}
                   <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col gap-6">
                     <div>
@@ -2483,7 +2482,7 @@ function AdminContent() {
                       <div className="bg-gray-50 border border-gray-200 rounded-xl flex flex-col overflow-hidden h-32 relative">
                         <div className="flex border-b border-gray-200 bg-white">
                           {['AWS', 'RAILWAY', 'VERCEL'].map(tab => (
-                            <button 
+                            <button
                               key={tab}
                               onClick={() => setTerminalTab(tab as any)}
                               className={`flex-1 py-2 text-[10px] font-bold tracking-wider transition-all ${terminalTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}
