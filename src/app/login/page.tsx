@@ -52,6 +52,26 @@ export default function LoginPage() {
       const { token, user } = await response.json();
       login(user, token);
 
+      // Track successful login event in PostHog
+      try {
+        const posthog = (await import("posthog-js")).default;
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY && user) {
+          posthog.identify(user.id, {
+            email: user.email,
+            phone: user.phone,
+            name: user.name,
+            role: user.role,
+          });
+          posthog.capture("user_login_success", {
+            userId: user.id,
+            role: user.role,
+            email: user.email,
+          });
+        }
+      } catch (phError) {
+        console.error("PostHog event capture failed:", phError);
+      }
+
       const role = user?.role?.toLowerCase();
       if (role === "admin" || role === "developer") {
         window.location.href = "/admin";

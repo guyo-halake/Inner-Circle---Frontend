@@ -127,6 +127,19 @@ export default function SignUpPage() {
         throw new Error(errorData.error || 'Failed to register');
       }
 
+      // Track successful signup conversion in PostHog
+      try {
+        const posthog = (await import("posthog-js")).default;
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+          posthog.capture("user_signup_success", {
+            email: data.email,
+            country: data.country,
+          });
+        }
+      } catch (phError) {
+        console.error("PostHog event capture failed:", phError);
+      }
+
       window.location.href = "/login";
     } catch (error: any) {
       console.error('Registration failed:', error);
