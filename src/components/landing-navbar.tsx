@@ -39,16 +39,22 @@ export function LandingNavbar() {
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <Link 
-              href="#performance" 
+              href="/#performance" 
               className="text-sm font-semibold text-muted-foreground hover:text-primary transition-all relative after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300"
             >
               Performance
             </Link>
             <Link 
-              href="#how-it-works" 
+              href="/#how-it-works" 
               className="text-sm font-semibold text-muted-foreground hover:text-primary transition-all relative after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300"
             >
               How it works
+            </Link>
+            <Link 
+              href="/about" 
+              className="text-sm font-semibold text-muted-foreground hover:text-primary transition-all relative after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300"
+            >
+              About Us
             </Link>
             <Link 
               href="#contact" 
@@ -110,18 +116,25 @@ export function LandingNavbar() {
           >
             <div className="container mx-auto px-6 py-6 flex flex-col gap-5 text-sm font-medium">
               <Link 
-                href="#performance" 
+                href="/#performance" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-2 text-muted-foreground hover:text-primary transition-colors"
               >
                 Performance
               </Link>
               <Link 
-                href="#how-it-works" 
+                href="/#how-it-works" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-2 text-muted-foreground hover:text-primary transition-colors"
               >
                 How it works
+              </Link>
+              <Link 
+                href="/about" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                About Us
               </Link>
               <Link 
                 href="#contact" 

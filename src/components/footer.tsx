@@ -65,6 +65,9 @@ export function Footer() {
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                 Quick Links
               </h4>
+              <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
+                About Us
+              </Link>
               <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">
                 Terms of Use
               </Link>
