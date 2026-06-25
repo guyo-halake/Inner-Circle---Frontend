@@ -6,7 +6,7 @@ import { Quote } from "lucide-react";
 const testimonials = [
   {
     quote: "The absolute transparency is what sets InnerCircle apart. Being able to track daily yields and initiate withdrawals with zero friction has redefined how I manage my private capital.",
-    name: "Razak Guyo",
+    name: "Jeffrey Wairugu",
     title: "Private Investor",
   },
   {

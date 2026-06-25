@@ -292,7 +292,7 @@ function AdminContent() {
       setPools(poolsData);
       setTradeProofs(proofsData);
       setAllTransactions(allTxData);
-      setSettingsState(prev => ({ ...prev, ...(settingsData as any) }));
+      setSettingsState((prev: any) => ({ ...prev, ...(settingsData as any) }));
       setTeamMembers(teamData);
       setAllUsers(usersData);
     } catch (err: any) {
@@ -394,6 +394,7 @@ function AdminContent() {
   }, [token]);
 
   const toggleSystemFreeze = async () => {
+    if (!token) return;
     try {
       if (!confirm(`Are you sure you want to ${transactionsFrozen ? 'UNFREEZE' : 'FREEZE'} all system transactions?`)) return;
       await fetchAuthed(`${API_URL}/api/admin/freeze-system`, token, {
@@ -587,7 +588,7 @@ function AdminContent() {
       const roles = await fetchAuthed<string[]>(`${API_URL}/api/admin/roles`, token);
       setUserRoles(roles);
       if (roles.length > 0) {
-        setAddUserForm(prev => ({ ...prev, role: roles[0] }));
+        setAddUserForm((prev: any) => ({ ...prev, role: roles[0] }));
       }
     } catch (err) {
       console.error("Failed to load roles", err);
@@ -2015,7 +2016,7 @@ function AdminContent() {
                             type="text"
                             required
                             value={addUserForm.fullName}
-                            onChange={(e) => setAddUserForm(prev => ({ ...prev, fullName: e.target.value }))}
+                            onChange={(e) => setAddUserForm((prev: any) => ({ ...prev, fullName: e.target.value }))}
                             className="w-full bg-muted/10 border border-border/30 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:border-foreground/30 text-[11px]"
                           />
                         </div>
@@ -2027,7 +2028,7 @@ function AdminContent() {
                               type="email"
                               required
                               value={addUserForm.email}
-                              onChange={(e) => setAddUserForm(prev => ({ ...prev, email: e.target.value }))}
+                              onChange={(e) => setAddUserForm((prev: any) => ({ ...prev, email: e.target.value }))}
                               className="w-full bg-muted/10 border border-border/30 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:border-foreground/30 text-[11px]"
                             />
                           </div>
@@ -2036,7 +2037,7 @@ function AdminContent() {
                             <input
                               type="text"
                               value={addUserForm.phone}
-                              onChange={(e) => setAddUserForm(prev => ({ ...prev, phone: e.target.value }))}
+                              onChange={(e) => setAddUserForm((prev: any) => ({ ...prev, phone: e.target.value }))}
                               className="w-full bg-muted/10 border border-border/30 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:border-foreground/30 text-[11px] font-numbers"
                             />
                           </div>
@@ -2049,7 +2050,7 @@ function AdminContent() {
                               type="password"
                               required
                               value={addUserForm.password}
-                              onChange={(e) => setAddUserForm(prev => ({ ...prev, password: e.target.value }))}
+                              onChange={(e) => setAddUserForm((prev: any) => ({ ...prev, password: e.target.value }))}
                               className="w-full bg-muted/10 border border-border/30 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:border-foreground/30 text-[11px] font-numbers"
                             />
                           </div>
@@ -2059,7 +2060,7 @@ function AdminContent() {
                               type="password"
                               required
                               value={addUserForm.confirmPassword}
-                              onChange={(e) => setAddUserForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                              onChange={(e) => setAddUserForm((prev: any) => ({ ...prev, confirmPassword: e.target.value }))}
                               className="w-full bg-muted/10 border border-border/30 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:border-foreground/30 text-[11px] font-numbers"
                             />
                           </div>
@@ -2069,7 +2070,7 @@ function AdminContent() {
                           <label className="text-[9px] uppercase font-black tracking-wider text-muted-foreground">Assign Role</label>
                           <select
                             value={addUserForm.role}
-                            onChange={(e) => setAddUserForm(prev => ({ ...prev, role: e.target.value }))}
+                            onChange={(e) => setAddUserForm((prev: any) => ({ ...prev, role: e.target.value }))}
                             className="w-full bg-muted/10 border border-border/30 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:border-foreground/30 cursor-pointer text-[11px]"
                           >
                             {userRoles.map(r => (
@@ -2180,7 +2181,7 @@ function AdminContent() {
                           <input
                             type="text"
                             value={settingsState.paybill_number}
-                            onChange={(e) => setSettingsState(prev => ({ ...prev, paybill_number: e.target.value }))}
+                            onChange={(e) => setSettingsState((prev: any) => ({ ...prev, paybill_number: e.target.value }))}
                             onBlur={(e) => updateDeveloperSetting("paybill_number", e.target.value)}
                             className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-numbers text-foreground focus:outline-none"
                           />
@@ -2190,7 +2191,7 @@ function AdminContent() {
                           <input
                             type="text"
                             value={settingsState.account_number}
-                            onChange={(e) => setSettingsState(prev => ({ ...prev, account_number: e.target.value }))}
+                            onChange={(e) => setSettingsState((prev: any) => ({ ...prev, account_number: e.target.value }))}
                             onBlur={(e) => updateDeveloperSetting("account_number", e.target.value)}
                             className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-numbers text-foreground focus:outline-none"
                           />
@@ -2203,7 +2204,7 @@ function AdminContent() {
                         <input
                           type="email"
                           value={settingsState.support_email}
-                          onChange={(e) => setSettingsState(prev => ({ ...prev, support_email: e.target.value }))}
+                          onChange={(e) => setSettingsState((prev: any) => ({ ...prev, support_email: e.target.value }))}
                           onBlur={(e) => updateDeveloperSetting("support_email", e.target.value)}
                           className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-mono text-foreground focus:outline-none"
                         />
@@ -2235,7 +2236,7 @@ function AdminContent() {
                             type="text"
                             disabled={!isEditingProfile}
                             value={settingsState.company_name || ""}
-                            onChange={(e) => setSettingsState(prev => ({ ...prev, company_name: e.target.value }))}
+                            onChange={(e) => setSettingsState((prev: any) => ({ ...prev, company_name: e.target.value }))}
                             onBlur={(e) => updateDeveloperSetting("company_name", e.target.value)}
                             className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                           />
@@ -2246,7 +2247,7 @@ function AdminContent() {
                             type="text"
                             disabled={!isEditingProfile}
                             value={settingsState.company_phone || ""}
-                            onChange={(e) => setSettingsState(prev => ({ ...prev, company_phone: e.target.value }))}
+                            onChange={(e) => setSettingsState((prev: any) => ({ ...prev, company_phone: e.target.value }))}
                             onBlur={(e) => updateDeveloperSetting("company_phone", e.target.value)}
                             className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-numbers text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                           />
@@ -2260,7 +2261,7 @@ function AdminContent() {
                             type="email"
                             disabled={!isEditingProfile}
                             value={settingsState.company_email || ""}
-                            onChange={(e) => setSettingsState(prev => ({ ...prev, company_email: e.target.value }))}
+                            onChange={(e) => setSettingsState((prev: any) => ({ ...prev, company_email: e.target.value }))}
                             onBlur={(e) => updateDeveloperSetting("company_email", e.target.value)}
                             className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-mono text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                           />
@@ -2271,7 +2272,7 @@ function AdminContent() {
                             type="email"
                             disabled={!isEditingProfile}
                             value={settingsState.admin_email || ""}
-                            onChange={(e) => setSettingsState(prev => ({ ...prev, admin_email: e.target.value }))}
+                            onChange={(e) => setSettingsState((prev: any) => ({ ...prev, admin_email: e.target.value }))}
                             onBlur={(e) => updateDeveloperSetting("admin_email", e.target.value)}
                             className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-bold font-mono text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
                           />
@@ -2284,7 +2285,7 @@ function AdminContent() {
                           type="url"
                           disabled={!isEditingProfile}
                           value={settingsState.social_instagram || ""}
-                          onChange={(e) => setSettingsState(prev => ({ ...prev, social_instagram: e.target.value }))}
+                          onChange={(e) => setSettingsState((prev: any) => ({ ...prev, social_instagram: e.target.value }))}
                           onBlur={(e) => updateDeveloperSetting("social_instagram", e.target.value)}
                           className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-mono text-[10px] text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed truncate"
                         />
@@ -2296,7 +2297,7 @@ function AdminContent() {
                           type="url"
                           disabled={!isEditingProfile}
                           value={settingsState.social_x || ""}
-                          onChange={(e) => setSettingsState(prev => ({ ...prev, social_x: e.target.value }))}
+                          onChange={(e) => setSettingsState((prev: any) => ({ ...prev, social_x: e.target.value }))}
                           onBlur={(e) => updateDeveloperSetting("social_x", e.target.value)}
                           className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-mono text-[10px] text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed truncate"
                         />
@@ -2308,7 +2309,7 @@ function AdminContent() {
                           type="url"
                           disabled={!isEditingProfile}
                           value={settingsState.social_facebook || ""}
-                          onChange={(e) => setSettingsState(prev => ({ ...prev, social_facebook: e.target.value }))}
+                          onChange={(e) => setSettingsState((prev: any) => ({ ...prev, social_facebook: e.target.value }))}
                           onBlur={(e) => updateDeveloperSetting("social_facebook", e.target.value)}
                           className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 font-mono text-[10px] text-foreground focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed truncate"
                         />
@@ -2523,7 +2524,7 @@ function AdminContent() {
                 <input
                   type="text" required
                   value={selectedUserForEdit.fullName}
-                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, fullName: e.target.value }))}
+                  onChange={(e) => setSelectedUserForEdit((prev: any) => ({ ...prev, fullName: e.target.value }))}
                   className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none"
                 />
               </div>
@@ -2532,7 +2533,7 @@ function AdminContent() {
                 <input
                   type="email" required
                   value={selectedUserForEdit.email}
-                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => setSelectedUserForEdit((prev: any) => ({ ...prev, email: e.target.value }))}
                   className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
                 />
               </div>
@@ -2541,7 +2542,7 @@ function AdminContent() {
                 <input
                   type="text"
                   value={selectedUserForEdit.phone || ""}
-                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) => setSelectedUserForEdit((prev: any) => ({ ...prev, phone: e.target.value }))}
                   className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
                 />
               </div>
@@ -2549,7 +2550,7 @@ function AdminContent() {
                 <label className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Role</label>
                 <select
                   value={selectedUserForEdit.role}
-                  onChange={(e) => setSelectedUserForEdit(prev => ({ ...prev, role: e.target.value }))}
+                  onChange={(e) => setSelectedUserForEdit((prev: any) => ({ ...prev, role: e.target.value }))}
                   className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none"
                 >
                   {userRoles.map(r => <option key={r} value={r}>{r}</option>)}
@@ -2579,7 +2580,7 @@ function AdminContent() {
                 <input
                   type="password" required minLength={6}
                   value={passwordForm.newPassword}
-                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  onChange={(e) => setPasswordForm((prev: any) => ({ ...prev, newPassword: e.target.value }))}
                   className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
                 />
               </div>
@@ -2588,7 +2589,7 @@ function AdminContent() {
                 <input
                   type="password" required minLength={6}
                   value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  onChange={(e) => setPasswordForm((prev: any) => ({ ...prev, confirmPassword: e.target.value }))}
                   className="w-full bg-muted/20 border border-border rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-foreground focus:outline-none"
                 />
               </div>
